@@ -18,3 +18,7 @@
 *.aux
 
 *.pdf
+
+*.idea 
+
+SP/cmake-build-debug

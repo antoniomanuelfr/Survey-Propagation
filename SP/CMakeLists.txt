@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 project(SurveyPropagation
         DESCRIPTION "C++ implementation of the Survey Propagation algorithm")
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

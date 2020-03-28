@@ -1,2 +1,7 @@
-## Survey Propagation
-This project is a C++ implementation of the Survey Propagation algorithm, proposed on this paper: https://arxiv.org/pdf/cs/0212002.pdf
+## Structure
+1. cnf: Folder that storage DIMACS files. 
+2. inc: Headers. 
+3. src: Source code. 
+
+## Usage
+ 

@@ -4,45 +4,31 @@
 
 #include "../inc/FactorGraph.h"
 
-std::vector<std::string> SplitString(const std::string& str)
-{
-    std::vector<std::string> cont;
-    std::istringstream aux(str);
-    std::copy(std::istream_iterator<std::string>(aux),std::istream_iterator<std::string>(), std::back_inserter(cont));
-    return cont;
+FactorGraph::FactorGraph(const std::string& path, int seed) {
+    int n_clauses, n_variables;
+    ReadDIMACS(path, n_clauses, n_variables);
+    this->NumberClauses = n_clauses;
+    this->NumberVariables = n_variables;
+    bool generate_rand = seed != -1;
+    LoadEdgeWeights(generate_rand, seed);
 }
 
-const std::vector<std::vector<int>> &FactorGraph::getNegativeNodes() const {
-    return NegativeNodes;
-}
-
-const std::vector<std::vector<int>> &FactorGraph::getPositiveNodes() const {
-    return PositiveNodes;
-}
-
-const std::vector<std::vector<float>> &FactorGraph::getEdgePis() const {
-    return EdgePis;
-}
-
-FactorGraph::FactorGraph(const std::string& path) {
-    ReadDIMACS(path);
-}
-
-void FactorGraph::ReadDIMACS(const std::string &path) {
+void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_variables) {
     std::ifstream input_file (path);
     std::string line;
     if (input_file.is_open()){
         // Check if the vectors are not empty
-        if (!this->PositiveNodes.empty() || !this->NegativeNodes.empty() || !this->EdgePis.empty()) {
-            PositiveNodes.clear();
-            NegativeNodes.clear();
+        if (!this->PositiveNodes.empty() || !this->NegativeNodes.empty() || !this->EdgeWeights.empty()) {
+            this->PositiveNodes.clear();
+            this->NegativeNodes.clear();
+            this->EdgeWeights.clear();
         }
         // Skip the comments.
         while(getline(input_file, line) && line[0] == 'c');
         std::vector<std::string> split = SplitString(line);
-        if (split[0] == "p" && split[1] == "cnf"){
-            int n_variables = std::stoi(split[2]);
-            int n_clauses = std::stoi(split[3]);
+        if (split[0] == "p" && split[1] == "cnf") {
+            n_variables = std::stoi(split[2]);
+            n_clauses = std::stoi(split[3]);
             int counter = 0, actual_value = 0, i;
             std::vector<int> positive_adjacency_list, negative_adjacency_list;
             std::vector<int>* selected_list;
@@ -56,8 +42,8 @@ void FactorGraph::ReadDIMACS(const std::string &path) {
                     i++;
                 }
                 //It's needed to push even when empty,
-                PositiveNodes.push_back(positive_adjacency_list);
-                NegativeNodes.push_back(negative_adjacency_list);
+                this->PositiveNodes.push_back(positive_adjacency_list);
+                this->NegativeNodes.push_back(negative_adjacency_list);
 
                 if (!positive_adjacency_list.empty()) {
                     positive_adjacency_list.clear();
@@ -76,3 +62,72 @@ void FactorGraph::ReadDIMACS(const std::string &path) {
     std::cout << "File: " << path << " readed correctly." << std::endl;
 }
 
+void FactorGraph::VariablesInClause(int clause, std::vector<int>& positives, std::vector<int>& negatives) const {
+    if(!positives.empty())
+        positives.clear();
+
+    if(!negatives.empty())
+        negatives.clear();
+
+    positives.insert(positives.begin(),this->PositiveNodes[clause].cbegin(), this->PositiveNodes[clause].cend());
+    negatives.insert(negatives.begin(),this->NegativeNodes[clause].cbegin(), this->NegativeNodes[clause].cend());
+}
+
+int FactorGraph::Connection(unsigned int clause, unsigned int variable, bool &positive) const {
+    auto it = std::find(this->PositiveNodes[clause].cbegin(), this->PositiveNodes[clause].cend(), variable);
+    auto pos = -1;
+    if(this->PositiveNodes[clause].cend() != it) {
+        // The complexity of this function is constant if the iterators are random access iterators
+        pos = std::distance(this->PositiveNodes[clause].cbegin(), it);
+        positive = true;
+    } else{
+        it = std::find(this->NegativeNodes[clause].cbegin(), this->NegativeNodes[clause].cend(), variable);
+        if(this->NegativeNodes[clause].cend() != it) {
+            // The complexity of this function is constant if the iterators are random access iterators
+            pos = std::distance(this->NegativeNodes[clause].cbegin(), it);
+            positive = false;
+        }
+    }
+    return pos;
+}
+
+void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
+    if (!this->EdgeWeights.empty()) {
+        this->EdgeWeights.clear();
+    }
+
+    std::default_random_engine generator(seed);
+    std::uniform_real_distribution<double> distribution(0,1);
+
+    this->EdgeWeights.resize(this->NumberClauses);
+    int pos;
+    bool positive;
+    for(int i = 0; i < this->NumberClauses; i++) {
+        for(int j = 0; j < this->NumberVariables; j++) {
+            // j will be the index of the variable j+1
+            pos = this->Connection(i, j+1, positive);
+            if(pos !=-1 && positive) {
+                double value = rand ? (distribution(generator)) : 1.0;
+                this->EdgeWeights[i].push_back(value);
+            } else {
+                if (pos != -1 && !positive) {
+                    double value = rand ? distribution(generator) : 1.0;
+                    this->EdgeWeights[i].push_back(value);
+                }
+            }
+        }
+    }
+}
+
+std::vector<std::string> SplitString(const std::string& str, char delim) {
+    std::vector<std::string> cont;
+    std::size_t current, previous = 0;
+    current = str.find(delim);
+    while (current != std::string::npos) {
+        cont.push_back(str.substr(previous, current - previous));
+        previous = current + 1;
+        current = str.find(delim, previous);
+    }
+    cont.push_back(str.substr(previous, current - previous));
+    return cont;
+}

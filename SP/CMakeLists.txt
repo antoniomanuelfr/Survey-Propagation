@@ -15,10 +15,11 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         message(STATUS "Doxygen was found, building docs")
         CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in
                 ${CMAKE_CURRENT_BINARY_DIR}/docs/Doxyfile @ONLY)
-        add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/docs/Doxyfile
+        add_custom_target(doc ALL ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/docs/Doxyfile
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs
                 COMMENT "Generating doxygen documentation"
                 VERBATIM)
+
     else()
         message(STATUS "Doxygen not found, not building docs")
     endif()

@@ -17,42 +17,57 @@ void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_var
     std::ifstream input_file (path);
     std::string line;
     if (input_file.is_open()){
-        // Check if the vectors are not empty
-        if (!this->PositiveNodes.empty() || !this->NegativeNodes.empty() || !this->EdgeWeights.empty()) {
-            this->PositiveNodes.clear();
-            this->NegativeNodes.clear();
-            this->EdgeWeights.clear();
-        }
+        // Clear vectors.
+        this->PositiveVariables.clear();
+        this->NegativeVariables.clear();
+        this->EdgeWeights.clear();
+        this->PositiveClauses.clear();
+        this->NegativeClauses.clear();
+
         // Skip the comments.
         while(getline(input_file, line) && line[0] == 'c');
+
         std::vector<std::string> split = SplitString(line);
         if (split[0] == "p" && split[1] == "cnf") {
             n_variables = std::stoi(split[2]);
             n_clauses = std::stoi(split[3]);
             int counter = 0, actual_value = 0, i;
-            std::vector<int> positive_adjacency_list, negative_adjacency_list;
-            std::vector<int>* selected_list;
+            std::vector<int> positive_adjacency_vector, negative_adjacency_vector;
+            std::vector<int>* selected_vector;
+            std::vector<std::vector<int>> positive_clauses(n_variables), negative_clauses(n_variables);
+            std::vector<std::vector<int>>* selected_clauses_vector;
+            
             while (getline(input_file,line) && counter < n_clauses) {
                 split = SplitString(line);
                 i = 0;
                 while(split[i] != "0" && i < n_variables) {
                     actual_value = std::stoi(split[i]);
-                    selected_list = actual_value > 0 ? &positive_adjacency_list : &negative_adjacency_list;
-                    selected_list->push_back(abs(actual_value));
+                    if (actual_value > 0){
+                        selected_vector= &positive_adjacency_vector;
+                        selected_clauses_vector = &positive_clauses;
+                    } else{
+                        selected_vector= &negative_adjacency_vector;
+                        selected_clauses_vector = &negative_clauses;
+                    }
+                    selected_vector->push_back(abs(actual_value));
+                    (*selected_clauses_vector)[abs(actual_value)-1].push_back(counter);
                     i++;
                 }
                 //It's needed to push even when empty,
-                this->PositiveNodes.push_back(positive_adjacency_list);
-                this->NegativeNodes.push_back(negative_adjacency_list);
+                this->PositiveVariables.push_back(positive_adjacency_vector);
+                this->NegativeVariables.push_back(negative_adjacency_vector);
 
-                if (!positive_adjacency_list.empty()) {
-                    positive_adjacency_list.clear();
+                if (!positive_adjacency_vector.empty()) {
+                    positive_adjacency_vector.clear();
                 }
-                if(!negative_adjacency_list.empty()) {
-                    negative_adjacency_list.clear();
+                if(!negative_adjacency_vector.empty()) {
+                    negative_adjacency_vector.clear();
                 }
                 counter++;
             }
+            this->PositiveClauses = positive_clauses;
+            this->NegativeClauses = negative_clauses;
+
         }else{
             std::cerr << "Enter a valid DIMACS file" << std::endl;
         }
@@ -69,22 +84,26 @@ void FactorGraph::VariablesInClause(int clause, std::vector<int>& positives, std
     if(!negatives.empty())
         negatives.clear();
 
-    positives.insert(positives.begin(),this->PositiveNodes[clause].cbegin(), this->PositiveNodes[clause].cend());
-    negatives.insert(negatives.begin(),this->NegativeNodes[clause].cbegin(), this->NegativeNodes[clause].cend());
+    positives.insert(positives.begin(), this->PositiveVariables[clause].cbegin(),
+            this->PositiveVariables[clause].cend());
+    negatives.insert(negatives.begin(), this->NegativeVariables[clause].cbegin(),
+            this->NegativeVariables[clause].cend());
 }
 
 int FactorGraph::Connection(unsigned int clause, unsigned int variable, bool &positive) const {
-    auto it = std::find(this->PositiveNodes[clause].cbegin(), this->PositiveNodes[clause].cend(), variable);
+    auto it = std::find(this->PositiveVariables[clause].cbegin(), this->PositiveVariables[clause].cend(),
+            variable);
     auto pos = -1;
-    if(this->PositiveNodes[clause].cend() != it) {
+    if(this->PositiveVariables[clause].cend() != it) {
         // The complexity of this function is constant if the iterators are random access iterators
-        pos = std::distance(this->PositiveNodes[clause].cbegin(), it);
+        pos = std::distance(this->PositiveVariables[clause].cbegin(), it);
         positive = true;
     } else{
-        it = std::find(this->NegativeNodes[clause].cbegin(), this->NegativeNodes[clause].cend(), variable);
-        if(this->NegativeNodes[clause].cend() != it) {
+        it = std::find(this->NegativeVariables[clause].cbegin(), this->NegativeVariables[clause].cend(),
+                variable);
+        if(this->NegativeVariables[clause].cend() != it) {
             // The complexity of this function is constant if the iterators are random access iterators
-            pos = std::distance(this->NegativeNodes[clause].cbegin(), it);
+            pos = std::distance(this->NegativeVariables[clause].cbegin(), it);
             positive = false;
         }
     }

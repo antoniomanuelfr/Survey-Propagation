@@ -18,16 +18,27 @@
  **/
 class FactorGraph{
 private:
-    std::vector<std::vector<int>> PositiveNodes;  /**< Vector that storage the negative literals.    */
-    std::vector<std::vector<int>> NegativeNodes;  /**< Vector that storage the positive literals.    */
-    std::vector<std::vector<double>> EdgeWeights; /**< Vector that storage the edge pis (weight).    */
-    int NumberClauses;                            /**< Integer that storage the number of clauses    */
-    int NumberVariables;                          /**< Integer that storage the number of variables  */
+    std::vector<std::vector<int>> PositiveVariables; /**< Vector that storage the positive variables of each clause.  */
+    std::vector<std::vector<int>> NegativeVariables; /**< Vector that storage the negative variables of each clause.  */
+    std::vector<std::vector<int>> PositiveClauses; /**< Vector that storage for each variable the clauses where
+    *  that variable appear as positive. The variables in a DIMACS file are in the range [1,NumberVariables]
+    *  and the 0 variable means that the clause has finished. The representation that is used goes from
+    *  [0,NumberVariables). So when we are saying that PositiveClauses[0] we are getting the clauses where the
+    *  variable 1 is positive.                                                                                        */
+    std::vector<std::vector<int>> NegativeClauses; /**< Vector that storage for each variable the clauses where
+    *  that variable appear as negative. The variables in a DIMACS file are in the range of [1,NumberVariables]
+    *  and the 0 variable means that the clause has finished. The representation that is used goes from
+    *  [0,NumberVariables). So when we are saying that NegativeClauses[0] we are getting the clauses where the
+    *  variable 1 is negative.                                                                                        */
+
+    std::vector<std::vector<double>> EdgeWeights; /**< Vector that storage the edge pis (weight).                     */
+    int NumberClauses; /**< Variable that storage the number of clauses.                                              */
+    int NumberVariables; /**< Variable that storage the number of variables.                                          */
 
 public:
 
     /**
-     * @brief Constructor for FactorGraph
+     * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path
      * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights)
      */
@@ -42,19 +53,33 @@ public:
     }
 
     /**
-     * @brief Getter por PositiveNodes
-     * @return A constant reference to PositiveNodes
+     * @brief Getter for PositiveVariables
+     * @return A constant reference to PositiveVariables
      */
-    const std::vector<std::vector<int>> &getPositiveNodes() const {
-        return PositiveNodes;
+    const std::vector<std::vector<int>> &getPositiveVariables() const {
+        return PositiveVariables;
     }
 
     /**
-     * @brief Getter por Negative
-     * @return A constant reference to NegativeNodes
+     * @brief Getter por NegativeVariables
+     * @return A constant reference to NegativeVariables
      */
-    const std::vector<std::vector<int>> &getNegativeNodes() const {
-        return NegativeNodes;
+    const std::vector<std::vector<int>> &getNegativeVariables() const {
+        return NegativeVariables;
+    }
+    /**
+     * @brief Getter por PositiveClauses
+     * @return A constant reference to PositiveClauses
+     */
+    const std::vector<std::vector<int>> &getPositiveClauses() const {
+        return PositiveClauses;
+    }
+    /**
+     * @brief Getter por NegativeClauses
+     * @return A constant reference to NegativeClauses
+     */
+    const std::vector<std::vector<int>> &getNVariablesInClauses() const {
+        return NegativeClauses;
     }
 
     /**
@@ -79,13 +104,11 @@ public:
      * @param path: Path to the file.
      * @param n_clauses: int where the number of clauses that was founded will be storaged
      * @param n_variables: int where the number of variables that was founded will be storaged
-
      */
     void ReadDIMACS(const std::string& path, int& n_clauses, int& n_variables);
 
     /**
-     * @brief Look for the positives and negatives variables in a clause. This function does NOT initialize the
-     *  NumberVariables and NumberClauses variables.
+     * @brief Look for the positives and negatives variables in a clause.
      * @param clause: Clause to look.
      * @param positives: Vector where the positive variables that appear in the clause will be storaged.
      * @param negatives: Vector where the negative variables that appear in the clause will be storaged.

@@ -16,7 +16,7 @@ This project is a C++ implementation of the Survey Propagation algorithm, propos
   `make`
 
 ## Todo list 
-1. [] Improve comments. 
-2. [] ReadDIMACS: Ignore comments that might be in the middle of the file
-3. [] Make functions to print the FactorGraph data structure
-4. [] Make the SurveyPropagation function
+1. [ ] Improve comments. 
+2. [ ] ReadDIMACS: Ignore comments that might be in the middle of the file
+3. [ ] Make functions to print the FactorGraph data structure
+4. [ ] Make the SurveyPropagation function

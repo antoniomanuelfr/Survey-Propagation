@@ -1,0 +1,1 @@
+1. [ ] Pesos para las variables negativas. 

@@ -16,7 +16,8 @@ This project is a C++ implementation of the Survey Propagation algorithm, propos
   `make`
 
 ## Todo list 
-1. [ ] Improve comments. 
+1. [X] Improve comments. 
 2. [X] ReadDIMACS: Ignore comments that might be in the middle of the file: <p>Commit <a href="https://github.com/antoniomanuelfr/Survey-Propagation/commit/05e2b6ae459a25f6824fc8eccd17264eb44da99f" rel="nofollow">05e2b6ae</a></p>
 3. [X] Make functions to print the FactorGraph data structure. <p>Commit <a href="https://github.com/antoniomanuelfr/Survey-Propagation/commit/05e2b6ae459a25f6824fc8eccd17264eb44da99f" rel="nofollow">05e2b6ae</a></p>
-4. [ ] Make the SurveyPropagation function
+4. [ ] Partial assignment function. 
+5. [ ] Make the SurveyPropagation function. 

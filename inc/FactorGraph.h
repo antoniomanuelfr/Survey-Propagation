@@ -34,6 +34,7 @@ private:
     std::vector<std::vector<double>> EdgeWeights; /**< Vector that storage the edge pis (weight).                     */
     int NumberClauses; /**< Variable that storage the number of clauses.                                              */
     int NumberVariables; /**< Variable that storage the number of variables.                                          */
+    std::string FilePath; /**< Variable that storage the path of the file                                             */
 
 public:
 
@@ -131,6 +132,8 @@ public:
      * @param seed: Random seed for the number generator. Defaults to 0.
      */
     void LoadEdgeWeights(bool rand = true, unsigned long seed = 0);
+
+    void PrintFactorGraph();
 };
 
 /**

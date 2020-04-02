@@ -1,3 +1,4 @@
+# Ignore latex auxiliary files
 
 *.toc
 
@@ -19,7 +20,14 @@
 
 *.pdf
 
-*.idea 
+# Ignore editors files
+
+.idea
+
+.vscode
+# Ignore build folders 
+
+build
 
 cmake-build-debug
 

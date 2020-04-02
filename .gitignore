@@ -30,3 +30,7 @@
 build
 
 cmake-build-debug
+
+.vscode/
+
+build/

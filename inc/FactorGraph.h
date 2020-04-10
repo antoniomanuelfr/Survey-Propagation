@@ -33,6 +33,8 @@ private:
     int NumberVariables; /**< Variable that storage the number of variables.                                          */
 
 public:
+    FactorGraph() {};
+
     /**
      * @brief Constructor for the FactorGraph class. The NumberClauses and NumberVariables is computed taking
      * the size of the vectors.
@@ -119,14 +121,6 @@ public:
     void ReadDIMACS(const std::string& path, int& n_clauses, int& n_variables);
 
     /**
-     * @brief Look for the positives and negatives variables in a clause.
-     * @param clause: Clause to look.
-     * @param positives: Vector where the positive variables that appear in the clause will be storaged.
-     * @param negatives: Vector where the negative variables that appear in the clause will be storaged.
-     */
-    void VariablesInClause(int clause, std::vector<int>& positives, std::vector<int>& negatives) const;
-
-    /**
      * @brief Check if a variable appears in a clause.
      * @param clause: Clause where to look for the variable.
      * @param variable: Variable that will be looked in Clause. If we want to find the variable 5, we have to put
@@ -144,6 +138,14 @@ public:
      */
     void LoadEdgeWeights(bool rand = true, unsigned long seed = 0);
 
+    /**
+     * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
+     * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
+     * clause where the variable appears as negative.
+     * @param assignment. Boolean vector. If the i position is true, it represent that the i variable will be true.
+     * If the position is false, it will be ignored.
+     * @return A FactorGraph with the partial assignment applied.
+     */
     FactorGraph PartialAssignment(const std::vector<bool> &assignment) const;
 
     /**

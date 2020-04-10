@@ -2,8 +2,7 @@
 // Created by antoniomanuelfr on 3/25/20.
 //
 
-#include "../inc/FactorGraph.h"
-
+#include "FactorGraph.h"
 
 FactorGraph::FactorGraph(const std::vector<std::vector<int>> &positiveVariables,
                          const std::vector<std::vector<int>> &negativeVariables,
@@ -101,19 +100,6 @@ void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_var
     std::cout << "File: " << path << " read correctly." << std::endl;
 }
 
-void FactorGraph::VariablesInClause(int clause, std::vector<int>& positives, std::vector<int>& negatives) const {
-    if(!positives.empty())
-        positives.clear();
-
-    if(!negatives.empty())
-        negatives.clear();
-
-    positives.insert(positives.begin(), this->PositiveVariables[clause].cbegin(),
-            this->PositiveVariables[clause].cend());
-    negatives.insert(negatives.begin(), this->NegativeVariables[clause].cbegin(),
-            this->NegativeVariables[clause].cend());
-}
-
 int FactorGraph::Connection(unsigned int clause, unsigned int variable, bool &positive) const {
     auto it = std::find(this->PositiveVariables[clause].cbegin(), this->PositiveVariables[clause].cend(),
                         variable - 1);
@@ -178,8 +164,6 @@ std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
     }
     return out;
 }
-
-FactorGraph FactorGraph::PartialAssignment(const std::vector<bool> &assignment) const {}
 
 std::vector<std::string> SplitString(const std::string &str, char delim) {
     // Vector with the sub-strings

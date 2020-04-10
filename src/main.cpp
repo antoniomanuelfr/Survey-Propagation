@@ -1,6 +1,7 @@
 #include <iostream>
-#include "../inc/FactorGraph.h"
+#include "SurveyPropagation.h"
 int main() {
     FactorGraph mygraph("../../cnf/aim-100-1_6-no-1.cnf");
-    std::cout << mygraph << std::endl;
+    SurveyPropagation sv(mygraph);
+    sv.print();
 }

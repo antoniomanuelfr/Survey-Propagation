@@ -4,10 +4,10 @@
 
 #include "FactorGraph.h"
 
-FactorGraph::FactorGraph(const std::vector<std::vector<int>> &positiveVariables,
-                         const std::vector<std::vector<int>> &negativeVariables,
-                         const std::vector<std::vector<int>> &positiveClauses,
-                         const std::vector<std::vector<int>> &negativeClauses,
+FactorGraph::FactorGraph(const std::vector<std::vector<unsigned int>> &positiveVariables,
+                         const std::vector<std::vector<unsigned int>> &negativeVariables,
+                         const std::vector<std::vector<unsigned int>> &positiveClauses,
+                         const std::vector<std::vector<unsigned int>> &negativeClauses,
                          const std::vector<std::vector<double>> &edgeWeights) {
     this->PositiveVariables = positiveVariables;
     this->NegativeVariables = negativeVariables;
@@ -27,10 +27,22 @@ FactorGraph::FactorGraph(const std::string &path, int seed) {
     LoadEdgeWeights(generate_rand, seed);
 }
 
-void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_variables) {
-    std::ifstream input_file (path);
+void FactorGraph::SetEdgeW(unsigned int clause, unsigned int variable, double value) {
+    if (clause < this->NumberClauses && variable < this->NumberVariables)
+        this->EdgeWeights[clause][variable] = value;
+}
+
+double FactorGraph::GetEdgeW(unsigned int clause, unsigned int variable) const {
+    if (clause < this->NumberClauses && variable < this->NumberVariables)
+        return this->EdgeWeights[clause][variable];
+    else
+        return 0.0;
+}
+
+void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables) {
+    std::ifstream input_file(path);
     std::string line;
-    if (input_file.is_open()){
+    if (input_file.is_open()) {
         // Clear vectors.
         this->PositiveVariables.clear();
         this->NegativeVariables.clear();
@@ -39,7 +51,7 @@ void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_var
         this->NegativeClauses.clear();
 
         // Skip the comments.
-        while(getline(input_file, line) && line[0] == 'c');
+        while (getline(input_file, line) && line[0] == 'c');
         // Split the string
         std::vector<std::string> split = SplitString(line);
         // Check if the first line after the comments is the DIMACS header.
@@ -48,13 +60,14 @@ void FactorGraph::ReadDIMACS(const std::string &path, int& n_clauses, int& n_var
             n_clauses = std::stoi(split[3]);
             int counter = 0, actual_value = 0, i;
             // This are auxiliary vectors that stores the adjacency list of the actual clause
-            std::vector<int> positive_adjacency_vector, negative_adjacency_vector;
-            std::vector<int>* selected_variables_vector; // This pointer helps to not repeat code.
+            std::vector<unsigned int> positive_adjacency_vector, negative_adjacency_vector;
+            std::vector<unsigned int> *selected_variables_vector; // This pointer helps to not repeat code.
             // This are auxiliary vectors that stores the clauses where appear the actual variable
-            std::vector<std::vector<int>> positive_clauses(n_variables), negative_clauses(n_variables);
-            std::vector<std::vector<int>>* selected_clauses_vector; // The same as the above pointer
+            std::vector<std::vector<unsigned int>> negative_clauses(n_variables);
+            std::vector<std::vector<unsigned int>> positive_clauses(n_variables);
+            std::vector<std::vector<unsigned int>> *selected_clauses_vector; // The same as the above pointer
             // We start reading the clauses section of the file
-            while (getline(input_file,line) && counter < n_clauses) {
+            while (getline(input_file, line) && counter < n_clauses) {
                 split = SplitString(line);
                 // We process only the line that are not comments
                 if (split[0] != "c") {
@@ -122,9 +135,9 @@ int FactorGraph::Connection(unsigned int clause, unsigned int variable, bool &po
 }
 
 void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
-    if (!this->EdgeWeights.empty()) {
+    if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
-    }
+
     std::default_random_engine generator(seed); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
     // Reserve memory
@@ -151,15 +164,56 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
     }
 }
 
+FactorGraph FactorGraph::PartialAssignment(const std::vector<bool> &assignment) const {
+    return FactorGraph();
+}
+
+std::vector<int> FactorGraph::Clause(unsigned int clause) const {
+    std::vector<int> ret_clause;
+    if (clause < this->NumberClauses) {
+        ret_clause.insert(ret_clause.begin(), this->PositiveVariables[clause].begin(),
+                          this->PositiveVariables[clause].end());
+
+        for (auto it : this->NegativeVariables[clause])
+            ret_clause.push_back(-it);
+    }
+    return ret_clause;
+}
+
+std::vector<unsigned int> FactorGraph::ClausesOfVariable(unsigned int variable) const {
+    std::vector<unsigned int> ret_clause;
+    if (variable < this->NumberVariables) {
+        ret_clause = this->PositiveClauses[variable];
+
+        for (auto it : this->NegativeClauses[variable])
+            ret_clause.push_back(it);
+    }
+    return ret_clause;
+}
+
+void
+FactorGraph::VariablesInClause(unsigned int clause, std::vector<int> &positives, std::vector<int> &negatives) const {
+    if (!positives.empty())
+        positives.clear();
+
+    if (!negatives.empty())
+        negatives.clear();
+
+    positives.insert(positives.begin(), this->PositiveVariables[clause].cbegin(),
+                     this->PositiveVariables[clause].cend());
+    negatives.insert(negatives.begin(), this->NegativeVariables[clause].cbegin(),
+                     this->NegativeVariables[clause].cend());
+}
+
 std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
     out << "p cnf " << graph.NumberVariables << " " << graph.NumberClauses << std::endl;
     for (int i = 0; i < graph.PositiveVariables.size(); i++) {
-        for (int it : graph.PositiveVariables[i])
-            out << it + 1 << " ";
-
-        for (int it : graph.NegativeVariables[i])
-            out << -(it + 1) << " ";
-
+        for (int it : graph.Clause(i)) {
+            if (it >= 0)
+                out << it + 1 << " ";
+            else
+                out << it - 1 << " ";
+        }
         out << "0" << std::endl;
     }
     return out;

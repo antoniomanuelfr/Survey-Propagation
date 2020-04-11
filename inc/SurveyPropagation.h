@@ -2,8 +2,8 @@
 // Created by antoniomanuelfr on 4/10/20.
 //
 
-#ifndef SURVEYPROPAGATION
-#define SURVEYPROPAGATION
+#ifndef SURVEY_PROPAGATION_H
+#define SURVEY_PROPAGATION_H
 
 #include <utility>
 
@@ -29,4 +29,4 @@ public:
 };
 
 
-#endif
+#endif // SURVEY_PROPAGATION_H

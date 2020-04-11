@@ -20,20 +20,28 @@
  *  [0,NumberVariables). So when we are saying that PositiveClauses[0] we are getting the clauses where the
  *  variable 1 is positive.
  **/
-class FactorGraph{
+class FactorGraph {
 private:
-    std::vector<std::vector<int>> PositiveVariables; /**< Vector that storage the positive variables of each clause.  */
-    std::vector<std::vector<int>> NegativeVariables; /**< Vector that storage the negative variables of each clause.  */
-    std::vector<std::vector<int>> PositiveClauses; /**< Vector that storage for each variable the clauses where
+    std::vector<std::vector<unsigned int>> PositiveVariables; /**< Vector that storage the positive variables of each clause.  */
+    std::vector<std::vector<unsigned int>> NegativeVariables; /**< Vector that storage the negative variables of each clause.  */
+    std::vector<std::vector<unsigned int>> PositiveClauses; /**< Vector that storage for each variable the clauses where
     *  that variable appear as positive.                                                                              */
-    std::vector<std::vector<int>> NegativeClauses; /**< Vector that storage for each variable the clauses where
+    std::vector<std::vector<unsigned int>> NegativeClauses; /**< Vector that storage for each variable the clauses where
     *  that variable appear as negative.                                                                              */
     std::vector<std::vector<double>> EdgeWeights; /**< Vector that storage the edge pis (weight).                     */
-    int NumberClauses; /**< Variable that storage the number of clauses.                                              */
-    int NumberVariables; /**< Variable that storage the number of variables.                                          */
+    int NumberClauses{0}; /**< Variable that storage the number of clauses.                                           */
+    int NumberVariables{0}; /**< Variable that storage the number of variables.                                       */
+    /**
+     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjutctive normal form)
+     * and overwrite the Positive and Negative vectors by it's content.
+     * @param path: Path to the file.
+     * @param n_clauses: int where the number of clauses that was founded will be storaged
+     * @param n_variables: int where the number of variables that was founded will be storaged
+     */
+    void ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables);
 
 public:
-    FactorGraph() {};
+    FactorGraph() = default;
 
     /**
      * @brief Constructor for the FactorGraph class. The NumberClauses and NumberVariables is computed taking
@@ -44,10 +52,10 @@ public:
      * @param negativeClauses Vector that will be copied in to the NegativeClauses of the object.
      * @param edgeWeights Vector that will be copied in to the EdgeWeights of the object
      */
-    FactorGraph(const std::vector<std::vector<int>> &positiveVariables,
-                const std::vector<std::vector<int>> &negativeVariables,
-                const std::vector<std::vector<int>> &positiveClauses,
-                const std::vector<std::vector<int>> &negativeClauses,
+    FactorGraph(const std::vector<std::vector<unsigned int>> &positiveVariables,
+                const std::vector<std::vector<unsigned int>> &negativeVariables,
+                const std::vector<std::vector<unsigned int>> &positiveClauses,
+                const std::vector<std::vector<unsigned int>> &negativeClauses,
                 const std::vector<std::vector<double>> &edgeWeights);
 
     /**
@@ -58,40 +66,18 @@ public:
     FactorGraph(const std::string &path, int seed = 0);
 
     /**
-     * @brief Getter for EdgeWeights vector.
-     * @return A constant reference to EdgePis.
-     */
-    const std::vector<std::vector<double>> &getEdgeWeights() const{
-        return this->EdgeWeights;
-    }
-
-    /**
-     * @brief Getter for PositiveVariables
-     * @return A constant reference to PositiveVariables
-     */
-    const std::vector<std::vector<int>> &getPositiveVariables() const {
-        return PositiveVariables;
-    }
-
-    /**
-     * @brief Getter por NegativeVariables
-     * @return A constant reference to NegativeVariables
-     */
-    const std::vector<std::vector<int>> &getNegativeVariables() const {
-        return NegativeVariables;
-    }
-    /**
      * @brief Getter por PositiveClauses
      * @return A constant reference to PositiveClauses
      */
-    const std::vector<std::vector<int>> &getPositiveClauses() const {
+    const std::vector<std::vector<unsigned int>> &getPositiveClauses() const {
         return PositiveClauses;
     }
+
     /**
      * @brief Getter por NegativeClauses
      * @return A constant reference to NegativeClauses
      */
-    const std::vector<std::vector<int>> &getNVariablesInClauses() const {
+    const std::vector<std::vector<unsigned int>> &getNegativeClauses() const {
         return NegativeClauses;
     }
 
@@ -99,7 +85,7 @@ public:
      * @brief Getter for NumberClauses
      * @return Integer with the value of NumberClauses
      */
-    int getNumberClauses() const {
+    int getNClauses() const {
         return NumberClauses;
     }
 
@@ -107,18 +93,25 @@ public:
      * @brief Getter for NumberVariables
      * @return Integer with the value of NumberVariables
      */
-    int getNumberVariables() const {
+    int getNVariables() const {
         return NumberVariables;
     }
 
     /**
-     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjutctive normal form)
-     * and overwrite the Positive and Negative vectors by it's content.
-     * @param path: Path to the file.
-     * @param n_clauses: int where the number of clauses that was founded will be storaged
-     * @param n_variables: int where the number of variables that was founded will be storaged
+     * @brief Getter for a specific edge weight.
+     * @param clause Clause of the edge.
+     * @param variable Variable of the edge
+     * @return The assigned weight of the edge between clause and variable
      */
-    void ReadDIMACS(const std::string& path, int& n_clauses, int& n_variables);
+    double GetEdgeW(unsigned int clause, unsigned int variable) const;
+
+    /**
+     * @brief Change the weight of a specific edge.
+     * @param clause Clause of the edge.
+     * @param variable Variable of the edge.
+     * @param value New weight of the edge.
+     */
+    void SetEdgeW(unsigned int clause, unsigned int variable, double value);
 
     /**
      * @brief Check if a variable appears in a clause.
@@ -149,7 +142,29 @@ public:
     FactorGraph PartialAssignment(const std::vector<bool> &assignment) const;
 
     /**
-     * @brief Operator << overload.
+     * @brief Return the complete clause.
+     * @param clause Clause to return.
+     * @return Vector that contains the clause
+     */
+    std::vector<int> Clause(unsigned int clause) const;
+
+    /**
+     * @brief Get the clauses where a variable appears.
+     * @param variable Variable to look for
+     * @return A vector with the clauses where variable appears
+     */
+    std::vector<unsigned int> ClausesOfVariable(unsigned int variable) const;
+
+    /**
+     * @brief Look for the positives and negatives variables in a clause.
+     * @param clause: Clause to look.
+     * @param positives: Vector where the positive variables that appear in the clause will be storaged.
+     * @param negatives: Vector where the negative variables that appear in the clause will be storaged.
+     */
+    void VariablesInClause(unsigned int clause, std::vector<int> &positives, std::vector<int> &negatives) const;
+
+    /**
+     * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
      * @param graph: Factor graph object that will be printed to out.
      * @return Ostream object with the contents of graph.

@@ -20,10 +20,10 @@ public:
 
     /**
      * @brief Function that implements the SP-Update function.
-     * @param clause
+     * @param search_clause
      * @param variable
      */
-    void Update(unsigned int clause, unsigned int variable);
+    void Update(unsigned int search_clause, unsigned int variable);
 
     void print();
 };

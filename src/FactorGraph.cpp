@@ -4,13 +4,14 @@
 
 #include "FactorGraph.h"
 
-FactorGraph::FactorGraph(umatrix &positiveVariables, umatrix &negativeVariables, umatrix &positiveClauses,
-                         umatrix &negativeClauses, wmatrix &edgeWeights) {
-    this->PositivesClauses = positiveVariables;
-    this->NegativesClauses = negativeVariables;
-    this->PositiveVariables = positiveClauses;
-    this->NegativesVariables = negativeClauses;
-    this->NumberClauses = this->PositivesClauses.size();
+FactorGraph::FactorGraph(const umatrix &positiveVariables, const umatrix &negativeVariables,
+                         const umatrix &positiveClauses, const umatrix &negativeClauses, const wmatrix &edgeWeights) {
+
+    this->PositiveClauses = positiveClauses;
+    this->NegativeClauses = negativeClauses;
+    this->PositiveVariables = positiveVariables;
+    this->NegativeVariables = negativeVariables;
+    this->NumberClauses = this->PositiveClauses.size();
     this->NumberVariables = this->PositiveVariables.size();
     this->EdgeWeights = edgeWeights;
 }
@@ -41,11 +42,11 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
     std::string line;
     if (input_file.is_open()) {
         // Clear vectors.
-        this->PositivesClauses.clear();
-        this->NegativesClauses.clear();
+        this->PositiveClauses.clear();
+        this->NegativeClauses.clear();
         this->EdgeWeights.clear();
         this->PositiveVariables.clear();
-        this->NegativesVariables.clear();
+        this->NegativeVariables.clear();
 
         // Skip the comments.
         while (getline(input_file, line) && line[0] == 'c');
@@ -85,8 +86,8 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                         i++;
                     }
                     //It's needed to push even when empty,
-                    this->PositivesClauses.push_back(positive_adjacency_vector);
-                    this->NegativesClauses.push_back(negative_adjacency_vector);
+                    this->PositiveClauses.push_back(positive_adjacency_vector);
+                    this->NegativeClauses.push_back(negative_adjacency_vector);
 
                     if (!positive_adjacency_vector.empty()) {
                         positive_adjacency_vector.clear();
@@ -98,7 +99,7 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                 }
             }
             this->PositiveVariables = positive_variables;
-            this->NegativesVariables = negative_variables;
+            this->NegativeVariables = negative_variables;
         }else{
             std::cerr << "Enter a valid DIMACS file" << std::endl;
         }
@@ -110,20 +111,20 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
 }
 
 int FactorGraph::Connection(unsigned int search_clause, unsigned int variable, bool &positive) const {
-    auto it = std::find(this->PositivesClauses[search_clause].cbegin(),
-                        this->PositivesClauses[search_clause].cend(), variable);
+    auto it = std::find(this->PositiveClauses[search_clause].cbegin(),
+                        this->PositiveClauses[search_clause].cend(), variable);
     auto pos = -1;
     // If the variable was founded, we have to find the index
-    if (this->PositivesClauses[search_clause].cend() != it) {
+    if (this->PositiveClauses[search_clause].cend() != it) {
         // The complexity of this function is constant if the iterators are random access iterators
-        pos = std::distance(this->PositivesClauses[search_clause].cbegin(), it);
+        pos = std::distance(this->PositiveClauses[search_clause].cbegin(), it);
         positive = true;
     } else {
-        it = std::find(this->NegativesClauses[search_clause].cbegin(),
-                       this->NegativesClauses[search_clause].cend(), variable);
-        if (this->NegativesClauses[search_clause].cend() != it) {
+        it = std::find(this->NegativeClauses[search_clause].cbegin(),
+                       this->NegativeClauses[search_clause].cend(), variable);
+        if (this->NegativeClauses[search_clause].cend() != it) {
             // The complexity of this function is constant if the iterators are random access iterators
-            pos = std::distance(this->NegativesClauses[search_clause].cbegin(), it);
+            pos = std::distance(this->NegativeClauses[search_clause].cbegin(), it);
             positive = false;
         }
     }
@@ -160,18 +161,55 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
 }
 
 FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) const {
-    return FactorGraph();
+    bool type;
+    int index;
+    // The vectors for the object.
+    umatrix positive_variables, negative_variables, positive_clauses, negative_clauses;
+    uvector aux_clause;
+    if (assignment.size() != this->getNVariables())
+        return FactorGraph();
+    FactorGraph res = FactorGraph();
+    for (int i = 0; i < assignment.size(); i++) {
+        // If the variable i changes.
+        if (assignment[i] != 0) {
+            for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
+                index = this->Connection(search_clause, i, type);
+                // If the variable i is in search_clause.
+                if (index != -1) {
+                    // If the variable appears as negative and we assign it to true.
+                    if (!type && assignment[i] == 1) {
+                        aux_clause = this->NegativeClauses[search_clause];
+                        aux_clause.erase(aux_clause.begin() + index);
+                        negative_clauses.push_back(aux_clause);
+                        positive_clauses.push_back(this->PositiveClauses[search_clause]);
+                    // If the variable appears as positive and we assign it to negative.
+                    } else if (type && assignment[i] == -1) {
+                        aux_clause = this->PositiveClauses[search_clause];
+                        aux_clause.erase(aux_clause.begin() + index);
+                        positive_clauses.push_back(aux_clause);
+                        negative_clauses.push_back(this->NegativeClauses[search_clause]);
+                    }
+                    // If the variable appears as negative and we assign it to negative or if the variable
+                    // appears as positive and we assign it to negative, the clause will be satisfied and deleted.
+                }
+            }
+        } else {
+            this->ClausesOfVariable();
+            positive_clauses.push_back(this->PositiveClauses[sear])
+        }
+    }
+
 }
 
 clause FactorGraph::Clause(unsigned int search_clause, unsigned int ignore) const {
     clause ret_clause;
     if (search_clause < this->NumberClauses) {
-        for (auto it : this->PositivesClauses[search_clause]) {
+        for (auto it : this->PositiveClauses[search_clause]) {
             if (it != ignore)
                 ret_clause.push_back(it);
         }
 
-        for (auto it : this->NegativesClauses[search_clause])
+        for (auto it : this->NegativeClauses[search_clause])
             if (it != ignore)
                 ret_clause.push_back(-it);
     }
@@ -181,26 +219,25 @@ clause FactorGraph::Clause(unsigned int search_clause, unsigned int ignore) cons
 uvector FactorGraph::ClausesOfVariable(unsigned int variable) const {
     uvector ret_clause;
     if (variable < this->NumberVariables) {
-        ret_clause = this->PositiveVariables[variable];
+        ret_clause = this->PositiveVariables[variable - 1];
 
-        for (auto it : this->NegativesVariables[variable])
+        for (auto it : this->NegativeVariables[variable - 1])
             ret_clause.push_back(it);
     }
     return ret_clause;
 }
 
-void
-FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const {
+void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const {
     if (!positives.empty())
         positives.clear();
 
     if (!negatives.empty())
         negatives.clear();
 
-    positives.insert(positives.begin(), this->PositivesClauses[clause].cbegin(),
-                     this->PositivesClauses[clause].cend());
-    negatives.insert(negatives.begin(), this->NegativesClauses[clause].cbegin(),
-                     this->NegativesClauses[clause].cend());
+    positives.insert(positives.begin(), this->PositiveClauses[clause].cbegin(),
+                     this->PositiveClauses[clause].cend());
+    negatives.insert(negatives.begin(), this->NegativeClauses[clause].cbegin(),
+                     this->NegativeClauses[clause].cend());
 }
 
 std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {

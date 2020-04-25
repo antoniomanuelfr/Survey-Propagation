@@ -17,14 +17,14 @@
 typedef std::vector<unsigned int> uvector;
 /** Create definition for clause. */
 typedef std::vector<int> clause;
-/** Create definition for to umatrix.*/
+/** Create definition for to umatrix. */
 typedef std::vector<std::vector<unsigned int>> umatrix;
-/** Create definition for wmatrix.*/
+/** Create definition for wmatrix. */
 typedef std::vector<std::vector<std::pair<int, double>>> wmatrix;
 
 /**
  * @brief Class for handle the factor graph representation of a CNF formula.
- * The variables in a DIMACS file are in the range [1,NumberVariables]
+ *  The variables in a DIMACS file are in the range [1,NumberVariables]
  *  and the 0 variable means that the clause has finished. The representation that is used goes from
  *  [0,NumberVariables). So when we are saying that PositiveVariables[0] we are getting the clauses where the
  *  variable 1 is positive.
@@ -32,13 +32,13 @@ typedef std::vector<std::vector<std::pair<int, double>>> wmatrix;
 class FactorGraph {
 private:
     /** Vector that storage the positive variables of each clause. */
-    umatrix PositivesClauses;
+    umatrix PositiveClauses;
     /** Vector that storage the negative variables of each clause. */
-    umatrix NegativesClauses;
+    umatrix NegativeClauses;
     /** Vector that storage for each variable the clauses where that variable appear as positive. */
     umatrix PositiveVariables;
     /** Vector that storage for each variable the clauses where that variable appear as negative. */
-    umatrix NegativesVariables;
+    umatrix NegativeVariables;
     /** Vector that storage the edge pis (weight). */
     wmatrix EdgeWeights;
     /** Variable that storage the number of clauses. */
@@ -47,11 +47,11 @@ private:
     int NumberVariables{0};
 
     /**
-     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjutctive normal form)
+     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjutctive normal form).
      * and overwrite the Positive and Negative vectors by it's content.
      * @param path: Path to the file.
-     * @param n_clauses: int where the number of clauses that was founded will be storaged
-     * @param n_variables: int where the number of variables that was founded will be storaged
+     * @param n_clauses: int where the number of clauses that was founded will be storaged.
+     * @param n_variables: int where the number of variables that was founded will be storaged.
      */
     void ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables);
 
@@ -61,49 +61,55 @@ public:
     /**
      * @brief Constructor for the FactorGraph class. The NumberClauses and NumberVariables is computed taking
      * the size of the vectors.
-     * @param positiveVariables Vector that will be copied in to the PositivesClauses of the object.
-     * @param negativeVariables Vector that will be copied in to the NegativesClauses of the object.
+     * @param positiveVariables Vector that will be copied in to the PositiveClauses of the object.
+     * @param negativeVariables Vector that will be copied in to the NegativeClauses of the object.
      * @param positiveClauses Vector that will be copied in to the PositiveVariables of the object.
-     * @param negativeClauses Vector that will be copied in to the NegativesVariables of the object.
-     * @param edgeWeights Vector that will be copied in to the EdgeWeights of the object
+     * @param negativeClauses Vector that will be copied in to the NegativeVariables of the object.
+     * @param edgeWeights Vector that will be copied in to the EdgeWeights of the object.
      */
-    FactorGraph(umatrix &positiveVariables, umatrix &negativeVariables, umatrix &positiveClauses,
-                umatrix &negativeClauses, wmatrix &edgeWeights);
-
+    FactorGraph(const umatrix &positiveVariables, const umatrix &negativeVariables, const umatrix &positiveClauses,
+                const umatrix &negativeClauses, const wmatrix &edgeWeights);
+    /**
+     * @brief Copy constructor for FactorGraph class.
+     * @param fc Factor graph to copy.
+     */
+    FactorGraph(FactorGraph const &fc) {
+        FactorGraph(fc.PositiveVariables, fc.NegativeVariables, fc.PositiveClauses, fc.NegativeClauses, fc.EdgeWeights);
+    }
     /**
      * @brief Constructor for FactorGraph.
-     * @param path: DIMACS file path
-     * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights)
+     * @param path: DIMACS file path.
+     * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights).
      */
     FactorGraph(const std::string &path, int seed = 0);
 
     /**
-     * @brief Getter por PositiveVariables
-     * @return A constant reference to PositiveVariables
+     * @brief Getter por PositiveVariables.
+     * @return A constant reference to PositiveVariables.
      */
     umatrix getPositiveClauses() const {
         return this->PositiveVariables;
     }
 
     /**
-     * @brief Getter por NegativesVariables
-     * @return A constant reference to NegativesVariables
+     * @brief Getter por NegativeVariables.
+     * @return A constant reference to NegativeVariables.
      */
     umatrix getNegativeClauses() const {
-        return this->NegativesVariables;
+        return this->NegativeVariables;
     }
 
     /**
-     * @brief Getter for NumberClauses
-     * @return Integer with the value of NumberClauses
+     * @brief Getter for NumberClauses.
+     * @return Integer with the value of NumberClauses.
      */
     int getNClauses() const {
         return NumberClauses;
     }
 
     /**
-     * @brief Getter for NumberVariables
-     * @return Integer with the value of NumberVariables
+     * @brief Getter for NumberVariables.
+     * @return Integer with the value of NumberVariables.
      */
     int getNVariables() const {
         return NumberVariables;
@@ -112,8 +118,8 @@ public:
     /**
      * @brief Getter for a specific edge weight.
      * @param search_clause Clause of the edge.
-     * @param variable Variable of the edge
-     * @return The assigned weight of the edge between search_clause and variable
+     * @param variable Variable of the edge.
+     * @return The assigned weight of the edge between search_clause and variable.
      */
     double GetEdgeW(unsigned int search_clause, unsigned int variable) const;
 
@@ -157,14 +163,14 @@ public:
      * @brief Return the complete search_clause.
      * @param search_clause Clause to search.
      * @param ignore Ignore certain variable. Defaults to 0.
-     * @return Vector that contains the search_clause
+     * @return Vector that contains the search_clause.
      */
     clause Clause(unsigned int search_clause, unsigned int ignore = 0) const;
 
     /**
      * @brief Get the clauses where a variable appears.
      * @param variable Variable to look for
-     * @return A vector with the clauses where variable appears
+     * @return A vector with the clauses where variable appears.
      */
     uvector ClausesOfVariable(unsigned int variable) const;
 

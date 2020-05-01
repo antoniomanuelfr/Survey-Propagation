@@ -19,6 +19,7 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
     bool connection_type;
     clause va;
     uvector va_u, va_s;
+    double survey = 1.0;
     double product_u = 1.0, product_s = 1.0, pi_u = 1.0, pi_s = 1.0, pi_0 = 1.0;
     // Check if there is a connection between the search_clause and the variable.
     if (this->AssociatedGraph.Connection(search_clause, variable, connection_type) == -1) {
@@ -51,8 +52,16 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
                     pi_0 *= 1 - this->AssociatedGraph.GetEdgeW(b, j);
                 }
             }
+            survey *= pi_u / (pi_u + pi_s + pi_0);
+            pi_0 = 1.0; product_s = 1.0; product_u = 1.0;
         }
     }
     // All the pis are calculated, so we calculate the survey
-    this->AssociatedGraph.SetEdgeW(search_clause, variable, pi_u / (pi_u + pi_s + pi_0));
+    this->AssociatedGraph.SetEdgeW(search_clause, variable, survey);
+}
+
+void SurveyPropagation::SP() {
+    for (int i = 0; i < n_iters; ++i) {
+    }
+
 }

@@ -1,7 +1,9 @@
 #include <iostream>
 #include "SurveyPropagation.h"
 int main() {
-    FactorGraph mygraph("../../cnf/aim-100-1_6-no-1.cnf");
+    FactorGraph mygraph("../../cnf/cnf_5_10.cnf");
     SurveyPropagation sv(mygraph);
-    sv.print();
+    std::vector<int> assignment {1, 0, 0, 0, 0} ;
+    mygraph.PartialAssignment(assignment);
+    std::cout << mygraph << std :: endl;
 }

@@ -1,0 +1,16 @@
+c Random k-CNF Generator. J. Giraldez-Cru
+c   value n = 5
+c   value m = 10
+c   value k = 3
+c   value seed = 0
+p cnf 5 10
+-4 2 -3 0
+-1 -4 2 0
+-3 5 -2 0
+3 1 -5 0
+-4 -2 -1 0
+-2 3 4 0
+3 -5 1 0
+3 4 1 0
+-5 -3 4 0
+-5 -3 4 0

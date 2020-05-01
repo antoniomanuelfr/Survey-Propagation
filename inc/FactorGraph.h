@@ -58,7 +58,7 @@ private:
 public:
     FactorGraph() = default;
 
-    /**
+    [[maybe_unused]] /**
      * @brief Constructor for the FactorGraph class. The NumberClauses and NumberVariables is computed taking
      * the size of the vectors.
      * @param positiveVariables Vector that will be copied in to the PositiveClauses of the object.
@@ -73,10 +73,9 @@ public:
      * @brief Copy constructor for FactorGraph class.
      * @param fc Factor graph to copy.
      */
-    FactorGraph(FactorGraph const &fc) {
-        FactorGraph(fc.PositiveVariables, fc.NegativeVariables, fc.PositiveClauses, fc.NegativeClauses, fc.EdgeWeights);
-    }
-    /**
+    FactorGraph(const FactorGraph &fc);
+
+    [[maybe_unused]] /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
      * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights).
@@ -150,6 +149,14 @@ public:
     void LoadEdgeWeights(bool rand = true, unsigned long seed = 0);
 
     /**
+     * @brief Function that loads new clauses vectors.
+
+     * @param deleted
+     * @param satisfied
+     */
+    void ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied);
+
+    /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
      * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
      * clause where the variable appears as negative.
@@ -157,7 +164,7 @@ public:
      * If the position is 0, it will be ignored and if it is -1, it will be consider as false.
      * @return A FactorGraph with the partial assignment applied.
      */
-    FactorGraph PartialAssignment(const std::vector<int> &assignment) const;
+    FactorGraph PartialAssignment(const std::vector<int> &assignment);
 
     /**
      * @brief Return the complete search_clause.

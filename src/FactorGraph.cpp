@@ -15,9 +15,25 @@ FactorGraph::FactorGraph(const umatrix &positiveVariables, const umatrix &negati
     this->NumberVariables = this->PositiveVariables.size();
     this->EdgeWeights = edgeWeights;
 }
+FactorGraph::FactorGraph(const FactorGraph &fc) {
+    this->PositiveVariables.clear();
+    this->NegativeVariables.clear();
+    this->PositiveClauses.clear();
+    this->NegativeClauses.clear();
+    this->EdgeWeights.clear();
+
+    this->PositiveClauses = fc.PositiveClauses;
+    this->NegativeClauses = fc.NegativeClauses;
+    this->PositiveVariables = fc.PositiveVariables;
+    this->NegativeVariables = fc.NegativeVariables;
+    this->EdgeWeights = fc.EdgeWeights;
+
+    this->NumberClauses = fc.NumberClauses;
+    this->NumberVariables = fc.NumberVariables;
+}
 
 FactorGraph::FactorGraph(const std::string &path, int seed) {
-    int n_clauses, n_variables;
+    int n_clauses = 0, n_variables = 0;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
@@ -52,8 +68,9 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
         while (getline(input_file, line) && line[0] == 'c');
         // Split the string
         std::vector<std::string> split = SplitString(line);
+
         // Check if the first line after the comments is the DIMACS header.
-        if (split[0] == "p" && split[1] == "cnf") {
+        if (!split.empty() && split[0] == "p" && split[1] == "cnf") {
             n_variables = std::stoi(split[2]);
             n_clauses = std::stoi(split[3]);
             int counter = 0, actual_value, i;
@@ -94,7 +111,7 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                     }
                     if (!negative_adjacency_vector.empty()) {
                         negative_adjacency_vector.clear();
-                    }
+                    }                                               
                     counter++;
                 }
             }
@@ -160,45 +177,84 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
     }
 }
 
-FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) const {
+void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
+    unsigned int del;
+    std::vector<bool> variables_to_delete(this->NumberVariables, true);
+    clause cl;
+
+    for (int clause = 0; clause < deleted.size(); clause++) {
+        for (auto del_v : deleted[clause]) {
+            // We delete the variable from the clause vector.
+            if (del_v > 0) {
+                this->PositiveClauses[clause].erase(std::find(this->PositiveClauses[clause].begin(),
+                                                              this->PositiveClauses[clause].end(), del_v));
+
+                this->PositiveVariables[del_v - 1].erase(std::find(this->PositiveVariables[del_v - 1].begin(),
+                        this->PositiveVariables[del_v - 1 ].end(), clause));
+            } else {
+                this->NegativeClauses[clause].erase(std::find(this->NegativeClauses[clause].begin(),
+                        this->NegativeClauses[clause].end(), abs(del_v)));
+                del = abs(del_v) -1;
+                this->NegativeVariables[del].erase(std::find(this->NegativeVariables[del].begin(),
+                        this->NegativeVariables[del].end(), clause));
+            }
+            // We delete the weight of the edge.
+            this->EdgeWeights[clause].erase(std::find_if(this->EdgeWeights[clause].begin(), this->EdgeWeights[clause].end(),
+                                       [del_v](const std::pair<int, double>& edge) {return edge.first == del_v;}));
+        }
+    }
+    del = 0;
+    for (int i = 0; i < satisfied.size(); i++) {
+        if (satisfied[i]) {
+            std::cout << "borrando " << i << std::endl;
+            this->PositiveClauses.erase(this->PositiveClauses.begin() + (i - del));
+            this->NegativeClauses.erase(this->NegativeClauses.begin() + (i - del));
+            del++;
+        }
+        for (int j = 0; j < satisfied.size(); j++){
+            cl = this->Clause(j);
+        }
+    }
+    this->NumberClauses = this->PositiveClauses.size();
+}
+
+FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
+    if (assignment.size() != this->NumberVariables)
+        return FactorGraph();
+
     bool type;
     int index;
-    // The vectors for the object.
-    umatrix positive_variables, negative_variables, positive_clauses, negative_clauses;
-    uvector aux_clause;
-    if (assignment.size() != this->getNVariables())
-        return FactorGraph();
-    FactorGraph res = FactorGraph();
+    std::vector<bool> satisfied_clauses(this->NumberClauses, false);
+    // This matrix
+    std::vector<std::vector<int>> deleted_variables_from_clauses;
+    FactorGraph res (*this);
+    deleted_variables_from_clauses.resize(this->NumberClauses);
     for (int i = 0; i < assignment.size(); i++) {
         // If the variable i changes.
         if (assignment[i] != 0) {
             for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
-                index = this->Connection(search_clause, i, type);
+                index = this->Connection(search_clause, i+1, type);
                 // If the variable i is in search_clause.
                 if (index != -1) {
                     // If the variable appears as negative and we assign it to true.
                     if (!type && assignment[i] == 1) {
-                        aux_clause = this->NegativeClauses[search_clause];
-                        aux_clause.erase(aux_clause.begin() + index);
-                        negative_clauses.push_back(aux_clause);
-                        positive_clauses.push_back(this->PositiveClauses[search_clause]);
+                        deleted_variables_from_clauses[search_clause].push_back(-(i + 1));
                     // If the variable appears as positive and we assign it to negative.
                     } else if (type && assignment[i] == -1) {
-                        aux_clause = this->PositiveClauses[search_clause];
-                        aux_clause.erase(aux_clause.begin() + index);
-                        positive_clauses.push_back(aux_clause);
-                        negative_clauses.push_back(this->NegativeClauses[search_clause]);
+                        deleted_variables_from_clauses[search_clause].push_back(i + 1);
                     }
-                    // If the variable appears as negative and we assign it to negative or if the variable
-                    // appears as positive and we assign it to negative, the clause will be satisfied and deleted.
+                    // If the variable appears as positive and we assign it to positive or
+                    // If the variable appears as negative and we assign it to negative,
+                    // the clause will be satisfied and deleted.
+                    else {
+                        satisfied_clauses[search_clause] = true;
+                    }
                 }
             }
-        } else {
-            this->ClausesOfVariable();
-            positive_clauses.push_back(this->PositiveClauses[sear])
         }
     }
-
+    this->ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
+    return res;
 }
 
 clause FactorGraph::Clause(unsigned int search_clause, unsigned int ignore) const {
@@ -243,8 +299,6 @@ void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uve
 std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
     out << "p cnf " << graph.NumberVariables << " " << graph.NumberClauses << std::endl;
     for (int i = 0; i < graph.NumberClauses; i++) {
-        out << "C cadena: " << i << std::endl;
-
         for (int it : graph.Clause(i)) {
             out << it << " ";
         }
@@ -254,6 +308,9 @@ std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
 }
 
 std::vector<std::string> SplitString(const std::string &str, char delim) {
+    if (str.empty()){
+        return std::vector<std::string>();
+    }
     // Vector with the sub-strings
     std::vector<std::string> cont;
     std::size_t current, previous = 0;

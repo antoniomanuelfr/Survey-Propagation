@@ -22,6 +22,7 @@ typedef std::vector<std::vector<unsigned int>> umatrix;
 /** Create definition for wmatrix. */
 typedef std::vector<std::vector<std::pair<int, double>>> wmatrix;
 
+bool operator == (const clause &c1, const clause &c2);
 /**
  * @brief Class for handle the factor graph representation of a CNF formula.
  *  The variables in a DIMACS file are in the range [1,NumberVariables]
@@ -56,22 +57,24 @@ private:
     void ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables);
 
     /**
-     * @brief Function that loads new clauses vectors.
-     * @param deleted
-     * @param satisfied
+     * @brief Function that loads new clauses vectors. It is used in the PartilAssignment function.
+     * @param deleted: Matrix where each row is the clause where the variable of each column will be deleted.
+     * @param satisfied: Vector with the clauses that are satisfied.
      */
     void ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied);
 
 public:
+    /**
+     * @brief Empty constructor.
+     */
     FactorGraph() = default;
-
     /**
      * @brief Copy constructor for FactorGraph class.
-     * @param fc Factor graph to copy.
+     * @param fc: Factor graph to copy.
      */
     FactorGraph(const FactorGraph &fc);
 
-    [[maybe_unused]] [[maybe_unused]] /**
+    /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
      * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights).
@@ -112,17 +115,17 @@ public:
 
     /**
      * @brief Getter for a specific edge weight.
-     * @param search_clause Clause of the edge.
-     * @param variable Variable of the edge.
+     * @param search_clause: Clause of the edge.
+     * @param variable: Variable of the edge.
      * @return The assigned weight of the edge between search_clause and variable.
      */
     double GetEdgeW(unsigned int search_clause, unsigned int variable) const;
 
     /**
      * @brief Change the weight of a specific edge.
-     * @param search_clause Clause of the edge.
-     * @param variable Variable of the edge.
-     * @param value New weight of the edge.
+     * @param search_clause: Clause of the edge.
+     * @param variable: Variable of the edge.
+     * @param value: New weight of the edge.
      */
     void SetEdgeW(unsigned int search_clause, unsigned int variable, double value);
 
@@ -148,7 +151,7 @@ public:
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
      * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
      * clause where the variable appears as negative.
-     * @param assignment. int vector. If the i position is 1, it represent that the i variable will be true.
+     * @param assignment: int vector. If the i position is 1, it represent that the i variable will be true.
      * If the position is 0, it will be ignored and if it is -1, it will be consider as false.
      * @return A FactorGraph with the partial assignment applied.
      */
@@ -156,15 +159,14 @@ public:
 
     /**
      * @brief Return the complete search_clause.
-     * @param search_clause Clause to search.
-     * @param ignore Ignore certain variable. Defaults to 0.
+     * @param search_clause: Clause to search.
      * @return Vector that contains the search_clause.
      */
-    clause Clause(unsigned int search_clause, unsigned int ignore = 0) const;
+    clause Clause(unsigned int search_clause) const;
 
     /**
      * @brief Get the clauses where a variable appears.
-     * @param variable Variable to look for
+     * @param variable: Variable to look for.
      * @return A vector with the clauses where variable appears.
      */
     uvector ClausesOfVariable(unsigned int variable) const;
@@ -172,20 +174,26 @@ public:
     /**
      * @brief Look for the positives and negatives variables in a clause.
      * @param clause: Clause to look.
-     * @param positives: Vector where the positive variables that appear in the clause will be storaged.
-     * @param negatives: Vector where the negative variables that appear in the clause will be storaged.
+     * @param positives: Vector where the positive variables that appear in the clause will be stored.
+     * @param negatives: Vector where the negative variables that appear in the clause will be stored.
      */
     void VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const;
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
-     * @param graph: Factor graph object that will be printed to out.
+     * @param graph: Factor graph object that will be printed out.
      * @return Ostream object with the contents of graph.
      */
-    friend std::ostream &operator<<(std::ostream &out, const FactorGraph &graph);
+    friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
 };
-
+/**
+ * @brief Operator << overload for clause. The output will have DIMACS syntax
+ * @param out: Ostream object (can be a file, standard output).
+ * @param clause: Clause vector that is going to be printed out.
+ * @return Ostream object with the contents of clause.
+ */
+std::ostream &operator << (std::ostream &out, const clause &clause);
 /**
  * @brief Split a string separated by a delimiter.
  * @param str: String that is going to be splitted.

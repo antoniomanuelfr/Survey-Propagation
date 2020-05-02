@@ -4,17 +4,6 @@
 
 #include "FactorGraph.h"
 
-FactorGraph::FactorGraph(const umatrix &positiveVariables, const umatrix &negativeVariables,
-                         const umatrix &positiveClauses, const umatrix &negativeClauses, const wmatrix &edgeWeights) {
-
-    this->PositiveClauses = positiveClauses;
-    this->NegativeClauses = negativeClauses;
-    this->PositiveVariables = positiveVariables;
-    this->NegativeVariables = negativeVariables;
-    this->NumberClauses = this->PositiveClauses.size();
-    this->NumberVariables = this->PositiveVariables.size();
-    this->EdgeWeights = edgeWeights;
-}
 FactorGraph::FactorGraph(const FactorGraph &fc) {
     this->PositiveVariables.clear();
     this->NegativeVariables.clear();
@@ -32,7 +21,7 @@ FactorGraph::FactorGraph(const FactorGraph &fc) {
     this->NumberVariables = fc.NumberVariables;
 }
 
-FactorGraph::FactorGraph(const std::string &path, int seed) {
+[[maybe_unused]] FactorGraph::FactorGraph(const std::string &path, int seed) {
     int n_clauses = 0, n_variables = 0;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
@@ -170,7 +159,7 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
                 // If there is a negative connection between i clause and j variable
                 if (pos != -1 && !positive) {
                     double value = rand ? distribution(generator) : 1.0;
-                    this->EdgeWeights[i].push_back(std::pair<int, double>(j, -value));
+                    this->EdgeWeights[i].push_back(std::pair<int, double>(-j, value));
                 }
             }
         }
@@ -178,41 +167,42 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
 }
 
 void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
-    unsigned int del;
-    std::vector<bool> variables_to_delete(this->NumberVariables, true);
+    unsigned int del = 0;
+    uvector *selected_clauses, *selected_variables;
     clause cl;
-
+    // First, remove the variables that are going to be deleted from the clauses.
     for (int clause = 0; clause < deleted.size(); clause++) {
         for (auto del_v : deleted[clause]) {
-            // We delete the variable from the clause vector.
-            if (del_v > 0) {
-                this->PositiveClauses[clause].erase(std::find(this->PositiveClauses[clause].begin(),
-                                                              this->PositiveClauses[clause].end(), del_v));
-
-                this->PositiveVariables[del_v - 1].erase(std::find(this->PositiveVariables[del_v - 1].begin(),
-                        this->PositiveVariables[del_v - 1 ].end(), clause));
-            } else {
-                this->NegativeClauses[clause].erase(std::find(this->NegativeClauses[clause].begin(),
-                        this->NegativeClauses[clause].end(), abs(del_v)));
-                del = abs(del_v) -1;
-                this->NegativeVariables[del].erase(std::find(this->NegativeVariables[del].begin(),
-                        this->NegativeVariables[del].end(), clause));
-            }
+            // Selection of the positive vectors.
+            selected_clauses = del_v > 0 ? &this->PositiveClauses[clause] : &this->NegativeClauses[clause];
+            // Find the variable to delete in the correct clause.
+            selected_clauses->erase(std::find(selected_clauses->begin(), selected_clauses->end(), del));
             // We delete the weight of the edge.
             this->EdgeWeights[clause].erase(std::find_if(this->EdgeWeights[clause].begin(), this->EdgeWeights[clause].end(),
                                        [del_v](const std::pair<int, double>& edge) {return edge.first == del_v;}));
         }
     }
-    del = 0;
+    // Remove the satisfied clauses.
     for (int i = 0; i < satisfied.size(); i++) {
         if (satisfied[i]) {
-            std::cout << "borrando " << i << std::endl;
+            cl = this->Clause(i - del);
             this->PositiveClauses.erase(this->PositiveClauses.begin() + (i - del));
             this->NegativeClauses.erase(this->NegativeClauses.begin() + (i - del));
             del++;
         }
-        for (int j = 0; j < satisfied.size(); j++){
-            cl = this->Clause(j);
+    }
+    for (auto &v : this->PositiveVariables) {
+        v.clear();
+    }
+    for (auto &v : this->NegativeVariables) {
+        v.clear();
+    }
+
+    for (int clause = 0; clause < this->PositiveClauses.size(); clause++) {
+        cl = this->Clause(clause);
+        for (auto var : cl) {
+            selected_variables = var > 0 ? &this->PositiveVariables[var - 1] : &this->NegativeVariables[abs(var) - 1];
+            selected_variables->push_back(clause);
         }
     }
     this->NumberClauses = this->PositiveClauses.size();

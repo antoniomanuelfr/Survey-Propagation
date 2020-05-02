@@ -4,12 +4,6 @@
 
 #include "SurveyPropagation.h"
 
-
-void SurveyPropagation::print() {
-    std::cout << this->AssociatedGraph << std::endl;
-
-}
-
 void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable) {
     // Preconditions: Clause and variable must be in the range and there has to be a connection.
     if (search_clause > this->AssociatedGraph.getNClauses() || variable > this->AssociatedGraph.getNVariables()) {

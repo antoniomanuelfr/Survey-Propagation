@@ -25,11 +25,11 @@
 .idea
 
 .vscode
-# Ignore build folders 
+# Ignore build folders
 
 build
 
-cmake-build-debug
+cmake-build-*
 
 .vscode/
 

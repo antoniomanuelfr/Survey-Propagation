@@ -259,7 +259,7 @@ FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
             }
         }
     }
-    this->ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
+    res.ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
     return res;
 }
 
@@ -298,6 +298,100 @@ void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uve
                      this->PositiveClauses[clause].cend());
     negatives.insert(negatives.begin(), this->NegativeClauses[clause].cbegin(),
                      this->NegativeClauses[clause].cend());
+}
+
+bool FactorGraph::SatisfiesC (const std::vector<bool> &assignment, unsigned int search_clause) const {
+    clause actual_clause = this->Clause(search_clause);
+    int index;
+    for (auto var : actual_clause) {
+        index = var > 0 ? var - 1 : abs(var) - 1;
+        if (((!assignment[index] && var < 0) || (assignment[index] && var > 0))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FactorGraph::SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
+                             std::vector<unsigned int> &satisfied_clauses) const {
+
+    if (!not_satisfied_clauses.empty()) {
+        not_satisfied_clauses.erase(not_satisfied_clauses.begin(), not_satisfied_clauses.end());
+    }
+    bool satisfied_formula = true;
+    for (unsigned int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
+        if (!this->SatisfiesC(assignment, search_clause)) {
+            satisfied_formula = false;
+            not_satisfied_clauses.push_back(search_clause);
+        } else {
+            satisfied_clauses.push_back(search_clause);
+        }
+    }
+    return satisfied_formula;
+}
+
+std::vector<unsigned int> FactorGraph::getBreakCount(std::vector<unsigned int> &satis_clauses, const clause &s_clause,
+                                                     std::vector<bool> assignment) const {
+    std::vector<unsigned int> break_count(s_clause.size(), 0);
+    clause actual_clause;
+    int index;
+    for (auto clause_index : satis_clauses) {
+        for (int i = 0; i < s_clause.size(); i++) {
+            index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
+            // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
+            assignment[index] = !assignment[index];
+            if (!this->SatisfiesC(assignment, clause_index)) {
+                break_count[i]++;
+            }
+            assignment[index] = !assignment[index];
+        }
+    }
+    return break_count;
+}
+
+std::vector<bool> FactorGraph::WalkSAT(int max_tries, int max_flips, double noise, int seed) const {
+    std::vector<bool> assignment(this->NumberVariables);
+    int v;
+    bool find;
+    std::vector<unsigned int> not_satisfied_clauses, satisfied_clauses;
+    std::default_random_engine generator(seed); // Random engine generator.
+    std::uniform_int_distribution<bool> bool_dist(false, true); //Distribution for the random generator.
+    std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random generator.
+
+    for (int i = 0; i < max_tries; i++) {
+        std::generate(assignment.begin(), assignment.end(), bool_dist(generator));
+        for (int flips = 0; flips < max_flips; flips++) {
+            if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses)) {
+                return assignment;
+            }
+            std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size());
+            // We get a random not satisfied clause
+            clause C = this->Clause(not_satisfied_clauses[int_dist(generator)]);
+            std::vector<unsigned int> count = this->getBreakCount(satisfied_clauses, C, assignment);
+            // Check if there is any variable of C with break count equal to 0.
+            find = false;
+            for (int j = 0; j < count.size(); j++) {
+                if (count[j] == 0) {
+                    find = true;
+                    v = C[j];
+                    break;
+                }
+            }
+            if (!find) {
+                if (double_dist(generator) > noise) {
+                    // We choose a random v of C
+                    std::uniform_int_distribution<int> dis(0, C.size() - 1);
+                    v = C[dis(generator)];
+                } else {
+                    auto it = std::min_element(C.begin(), C.end());
+                    v = C[*it];
+                }
+            }
+            v = v > 0 ? v - 1 : abs(v) - 1;
+            assignment[v] = !assignment[v];
+        }
+    }
+    return std::vector<bool>();
 }
 
 std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {

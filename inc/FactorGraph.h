@@ -114,6 +114,15 @@ public:
     }
 
     /**
+     * @brief Get all the edges of a clause.
+     * @param search_clause: Clause that will be looked.
+     * @return Vector with all the edges of search_clause.
+     */
+    std::vector<std::pair<int, double>> getEdge(unsigned int search_clause) {
+        return this->EdgeWeights[search_clause];
+    }
+
+    /**
      * @brief Getter for a specific edge weight.
      * @param search_clause: Clause of the edge.
      * @param variable: Variable of the edge.
@@ -180,13 +189,56 @@ public:
     void VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const;
 
     /**
+     * @brief Function that checks if an assignment satisfies or not a given clause.
+     * @param assignment: Boolean vector with the assignment (true if positive false if negative).
+     * @param search_clause: Clause that will be checked if the assignment satisfies it.
+     * @return true if the clause is satisfied and false if not.
+     */
+    bool SatisfiesC(const std::vector<bool> &assignment, unsigned int search_clause) const;
+
+    /**
+     * @brief Function that checks if an assignment satisfies or not the formula.
+     * @param assignment: Boolean vector with the assignment (true if positive false if negative).
+     * @param not_satisfied_clauses: Vector that will store the not satisfied clauses.
+     * @param satisfied_clauses: Vector that will store the satisfied clauses.
+     * @return true if the formula is satisfied and false if not.
+     */
+    bool SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
+                    std::vector<unsigned int> &satisfied_clauses) const;
+
+    /**
+     * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
+     * flipped and count the number of clauses that are still satisfied.
+     * @param satis_clauses: Clauses that are satisfied with the given assignment.
+     * @param s_clause: Clause.
+     * @param assignment: True assigment that will be used.
+     * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
+     * variable of the clause.
+     */
+    std::vector<unsigned int> getBreakCount(std::vector<unsigned int> &satis_clauses, const clause &s_clause,
+                                            std::vector<bool> assignment) const;
+
+    /**
+     * @brief WalkSAT algorithm for FactorGraph class.
+     * @param max_tries: Maximum number of tries that the algorithm will do.
+     * @param max_flips: Maximum number of flips that the algorithm will do.
+     * @param noise: Noise parameter (this will choose if taking a random variable of c or the variable with the lower
+     * break count.
+     * @param seed: Seed that will be used for the random number generators. Defaults to 0.
+     * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
+     * an assignment, it will return an empty vector.
+     */
+    std::vector<bool> WalkSAT(int max_tries, int max_flips, double noise, int seed = 0) const;
+    /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
      * @param graph: Factor graph object that will be printed out.
      * @return Ostream object with the contents of graph.
      */
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
+
 };
+
 /**
  * @brief Operator << overload for clause. The output will have DIMACS syntax
  * @param out: Ostream object (can be a file, standard output).
@@ -194,6 +246,7 @@ public:
  * @return Ostream object with the contents of clause.
  */
 std::ostream &operator << (std::ostream &out, const clause &clause);
+
 /**
  * @brief Split a string separated by a delimiter.
  * @param str: String that is going to be splitted.

@@ -19,6 +19,8 @@ private:
     unsigned int n_iters;
     /** Precision value. */
     double precision;
+    /** Random seed that is going to be used */
+    int seed;
 
 public:
     /**
@@ -27,10 +29,12 @@ public:
      * @param n_iters Maximum number of iterations. Defaults to 1000.
      * @param precision Precision of the algoritm. Defaults to 0.1.
      */
-    SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 1000, double precision = 0.1) {
+    SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 1000,
+            double precision = 0.1, int seed = 0) {
         this->AssociatedGraph = AssociatedGraph;
         this->n_iters = n_iters;
         this->precision = precision;
+        this->seed = seed;
     }
 
     /**

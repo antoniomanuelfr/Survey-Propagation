@@ -55,7 +55,21 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
 }
 
 void SurveyPropagation::SP() {
-    for (int i = 0; i < n_iters; ++i) {
-    }
+    std::default_random_engine generator(seed); // Random engine generator.
+    std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
 
+    uvector indexes;
+    uvector clauses;
+    std::iota(indexes.begin(), indexes.end(), 0); // Generate the indexes vector.
+
+    for (int iters = 0; iters < this->n_iters; iters++) {
+        std::shuffle(indexes.begin(), indexes.end(), generator);
+        clauses.clear();
+        for (int index : indexes) {
+            for (int i = 0; i < AssociatedGraph.getEdge(index).size(); i++) {
+                clauses.push_back(i);
+            }
+
+        }
+    }
 }

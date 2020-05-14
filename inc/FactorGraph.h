@@ -12,6 +12,7 @@
 #include <fstream>
 #include <algorithm>
 #include <random>
+#include <unordered_map>
 
 /** Create definition for uvector. */
 typedef std::vector<unsigned int> uvector;
@@ -22,6 +23,12 @@ typedef std::vector<std::vector<unsigned int>> umatrix;
 /** Create definition for wmatrix. */
 typedef std::vector<std::vector<std::pair<int, double>>> wmatrix;
 
+/**
+ * @brief Operator == for two clauses.
+ * @param c1: First clause.
+ * @param c2: Second clause.
+ * @return True if the two clauses are equal (element by element).
+ */
 bool operator == (const clause &c1, const clause &c2);
 /**
  * @brief Class for handle the factor graph representation of a CNF formula.
@@ -79,13 +86,13 @@ public:
      * @param path: DIMACS file path.
      * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights).
      */
-    FactorGraph(const std::string &path, int seed = 0);
+    explicit FactorGraph(const std::string &path, int seed = 0);
 
     /**
      * @brief Getter por PositiveVariables.
      * @return A constant reference to PositiveVariables.
      */
-    umatrix getPositiveClauses() const {
+    [[nodiscard]] umatrix getPositiveClauses() const {
         return this->PositiveVariables;
     }
 
@@ -93,7 +100,7 @@ public:
      * @brief Getter por NegativeVariables.
      * @return A constant reference to NegativeVariables.
      */
-    umatrix getNegativeClauses() const {
+    [[nodiscard]] umatrix getNegativeClauses() const {
         return this->NegativeVariables;
     }
 
@@ -101,7 +108,7 @@ public:
      * @brief Getter for NumberClauses.
      * @return Integer with the value of NumberClauses.
      */
-    int getNClauses() const {
+    [[nodiscard]] int getNClauses() const {
         return NumberClauses;
     }
 
@@ -109,7 +116,7 @@ public:
      * @brief Getter for NumberVariables.
      * @return Integer with the value of NumberVariables.
      */
-    int getNVariables() const {
+    [[nodiscard]] int getNVariables() const {
         return NumberVariables;
     }
 
@@ -128,7 +135,7 @@ public:
      * @param variable: Variable of the edge.
      * @return The assigned weight of the edge between search_clause and variable.
      */
-    double GetEdgeW(unsigned int search_clause, unsigned int variable) const;
+    [[nodiscard]] double GetEdgeW(unsigned int search_clause, unsigned int variable) const;
 
     /**
      * @brief Change the weight of a specific edge.
@@ -171,14 +178,14 @@ public:
      * @param search_clause: Clause to search.
      * @return Vector that contains the search_clause.
      */
-    clause Clause(unsigned int search_clause) const;
+    [[nodiscard]] clause Clause(unsigned int search_clause) const;
 
     /**
      * @brief Get the clauses where a variable appears.
      * @param variable: Variable to look for.
      * @return A vector with the clauses where variable appears.
      */
-    uvector ClausesOfVariable(unsigned int variable) const;
+    [[nodiscard]] uvector ClausesOfVariable(unsigned int variable) const;
 
     /**
      * @brief Look for the positives and negatives variables in a clause.
@@ -194,7 +201,7 @@ public:
      * @param search_clause: Clause that will be checked if the assignment satisfies it.
      * @return true if the clause is satisfied and false if not.
      */
-    bool SatisfiesC(const std::vector<bool> &assignment, unsigned int search_clause) const;
+    [[nodiscard]] bool SatisfiesC(const std::vector<bool> &assignment, const clause &search_clause) const;
 
     /**
      * @brief Function that checks if an assignment satisfies or not the formula.
@@ -204,7 +211,7 @@ public:
      * @return true if the formula is satisfied and false if not.
      */
     bool SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
-                    std::vector<unsigned int> &satisfied_clauses) const;
+                    std::vector<unsigned int> &satisfied_clauses, std::vector<unsigned int> &indexes) const;
 
     /**
      * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
@@ -215,8 +222,8 @@ public:
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
      * variable of the clause.
      */
-    std::vector<unsigned int> getBreakCount(std::vector<unsigned int> &satis_clauses, const clause &s_clause,
-                                            std::vector<bool> assignment) const;
+    [[nodiscard]] std::vector<unsigned int> getBreakCount(const std::vector<unsigned int> &satis_clauses, const clause &s_clause,
+                                            const std::vector<bool> &assignment) const;
 
     /**
      * @brief WalkSAT algorithm for FactorGraph class.
@@ -228,7 +235,7 @@ public:
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
      * an assignment, it will return an empty vector.
      */
-    std::vector<bool> WalkSAT(int max_tries, int max_flips, double noise, int seed = 0) const;
+    [[nodiscard]] std::vector<bool> WalkSAT(int max_tries, int max_flips, double noise, int seed = 0) const;
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
@@ -236,7 +243,6 @@ public:
      * @return Ostream object with the contents of graph.
      */
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
-
 };
 
 /**

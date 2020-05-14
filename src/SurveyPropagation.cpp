@@ -56,8 +56,7 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
 
 void SurveyPropagation::SP() {
     std::default_random_engine generator(seed); // Random engine generator.
-    std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
-
+    std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
     uvector indexes;
     uvector clauses;
     std::iota(indexes.begin(), indexes.end(), 0); // Generate the indexes vector.

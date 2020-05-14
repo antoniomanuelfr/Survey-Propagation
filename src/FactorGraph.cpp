@@ -120,9 +120,11 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
             this->NegativeVariables = negative_variables;
         }else{
             std::cerr << "Enter a valid DIMACS file" << std::endl;
+            exit(-1);
         }
     }else{
         std::cerr << "File not found" << std::endl;
+        exit(-1);
     }
     std::cout << "File: " << path << " read correctly." << std::endl;
     input_file.close();
@@ -266,10 +268,9 @@ FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
 clause FactorGraph::Clause(unsigned int search_clause) const {
     clause ret_clause;
     if (search_clause < this->NumberClauses) {
-        for (auto it : this->PositiveClauses[search_clause]) {
-                ret_clause.push_back(it);
-        }
-
+        ret_clause.reserve(this->PositiveClauses[search_clause].size() + this->NegativeClauses[search_clause].size());
+        for (auto it : this->PositiveClauses[search_clause])
+            ret_clause.push_back(it);
         for (auto it : this->NegativeClauses[search_clause])
                 ret_clause.push_back(-it);
     }
@@ -300,12 +301,11 @@ void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uve
                      this->NegativeClauses[clause].cend());
 }
 
-bool FactorGraph::SatisfiesC (const std::vector<bool> &assignment, unsigned int search_clause) const {
-    clause actual_clause = this->Clause(search_clause);
+bool FactorGraph::SatisfiesC(const std::vector<bool> &assignment, const clause &search_clause) const {
     int index;
-    for (auto var : actual_clause) {
-        index = var > 0 ? var - 1 : abs(var) - 1;
-        if (((!assignment[index] && var < 0) || (assignment[index] && var > 0))) {
+    for (int i : search_clause) {
+        index = i > 0 ? i - 1 : abs(i) - 1;
+        if (((!assignment[index] && i < 0) || (assignment[index] && i > 0))) {
             return true;
         }
     }
@@ -313,14 +313,18 @@ bool FactorGraph::SatisfiesC (const std::vector<bool> &assignment, unsigned int 
 }
 
 bool FactorGraph::SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
-                             std::vector<unsigned int> &satisfied_clauses) const {
+                             std::vector<unsigned int> &satisfied_clauses, std::vector<unsigned int> &indexes) const {
 
     if (!not_satisfied_clauses.empty()) {
-        not_satisfied_clauses.erase(not_satisfied_clauses.begin(), not_satisfied_clauses.end());
+        not_satisfied_clauses.clear();
     }
+    if (!satisfied_clauses.empty()) {
+        satisfied_clauses.clear();
+    }
+
     bool satisfied_formula = true;
-    for (unsigned int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
-        if (!this->SatisfiesC(assignment, search_clause)) {
+    for (auto search_clause : indexes) {
+        if (!this->SatisfiesC(assignment, this->Clause(search_clause))) {
             satisfied_formula = false;
             not_satisfied_clauses.push_back(search_clause);
         } else {
@@ -330,65 +334,71 @@ bool FactorGraph::SatisfiesF(const std::vector<bool> &assignment, std::vector<un
     return satisfied_formula;
 }
 
-std::vector<unsigned int> FactorGraph::getBreakCount(std::vector<unsigned int> &satis_clauses, const clause &s_clause,
-                                                     std::vector<bool> assignment) const {
+std::vector<unsigned int>FactorGraph::getBreakCount(const std::vector<unsigned int> &satis_clauses,
+                                                    const clause &s_clause, const std::vector<bool> &assignment) const {
+
     std::vector<unsigned int> break_count(s_clause.size(), 0);
-    clause actual_clause;
+    std::vector<bool> sat_vars;
     int index;
+    clause c;
     for (auto clause_index : satis_clauses) {
+        c = this->Clause(clause_index);
         for (int i = 0; i < s_clause.size(); i++) {
             index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
             // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
-            assignment[index] = !assignment[index];
-            if (!this->SatisfiesC(assignment, clause_index)) {
+            if (!((assignment[index] && c[i] < 0) || (!assignment[index] && c[i] > 0))) {
                 break_count[i]++;
             }
-            assignment[index] = !assignment[index];
         }
     }
     return break_count;
 }
 
 std::vector<bool> FactorGraph::WalkSAT(int max_tries, int max_flips, double noise, int seed) const {
-    std::vector<bool> assignment(this->NumberVariables);
     int v;
-    bool find;
-    std::vector<unsigned int> not_satisfied_clauses, satisfied_clauses;
-    std::default_random_engine generator(seed); // Random engine generator.
-    std::uniform_int_distribution<bool> bool_dist(false, true); //Distribution for the random generator.
-    std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random generator.
+    std::vector<bool> assignment(this->NumberVariables);
+    uvector not_satisfied_clauses, satisfied_clauses, indexes(this->NumberClauses);
+    std::default_random_engine gen(seed); // Random engine generator.
+    std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
+    std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
     for (int i = 0; i < max_tries; i++) {
-        std::generate(assignment.begin(), assignment.end(), bool_dist(generator));
+
+        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen](){return static_cast<bool>(bdist(gen));});
+        std::iota(indexes.begin(), indexes.end(), 0);
+
+        if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses, indexes)) {
+            return assignment;
+        }
+
         for (int flips = 0; flips < max_flips; flips++) {
-            if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses)) {
+            if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses, indexes)) {
                 return assignment;
             }
-            std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size());
+            std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
             // We get a random not satisfied clause
-            clause C = this->Clause(not_satisfied_clauses[int_dist(generator)]);
+            clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
             std::vector<unsigned int> count = this->getBreakCount(satisfied_clauses, C, assignment);
             // Check if there is any variable of C with break count equal to 0.
-            find = false;
+            bool find = false;
             for (int j = 0; j < count.size(); j++) {
-                if (count[j] == 0) {
+                if (count[j]) {
                     find = true;
-                    v = C[j];
+                    v = j;
                     break;
                 }
             }
             if (!find) {
-                if (double_dist(generator) > noise) {
+                if (double_dist(gen) > noise) {
                     // We choose a random v of C
                     std::uniform_int_distribution<int> dis(0, C.size() - 1);
-                    v = C[dis(generator)];
+                    v = dis(gen);
                 } else {
-                    auto it = std::min_element(C.begin(), C.end());
-                    v = C[*it];
+                    v = std::distance(count.begin(), std::min_element(count.begin(), count.end()));
                 }
             }
-            v = v > 0 ? v - 1 : abs(v) - 1;
-            assignment[v] = !assignment[v];
+            int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
+            assignment[index] = !assignment[index];
         }
     }
     return std::vector<bool>();

@@ -39,17 +39,18 @@ FactorGraph::FactorGraph(const std::string &path, int seed) {
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
     bool generate_rand = seed != -1;
-    LoadEdgeWeights(generate_rand, seed);
+    RandomizeWeights(generate_rand, seed);
 }
 
-void FactorGraph::SetEdgeW(unsigned int search_clause, unsigned int variable, double value) {
-    if (search_clause < this->NumberClauses && variable < this->NumberVariables)
-        this->EdgeWeights[search_clause][variable] = std::pair<int, double>(variable, value);
+void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int variable, double value) {
+    if (search_clause < this->NumberClauses && variable < this->NumberVariables) {
+        this->EdgeWeights[search_clause][variable] = value;
+    }
 }
 
-double FactorGraph::GetEdgeW(unsigned int search_clause, unsigned int variable) const {
+double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) const {
     if (search_clause < this->NumberClauses && variable < this->NumberVariables)
-        return this->EdgeWeights[search_clause][variable].second;
+        return this->EdgeWeights[search_clause][variable];
     else
         return 0.0;
 }
@@ -151,7 +152,7 @@ int FactorGraph::Connection(unsigned int search_clause, unsigned int variable, b
     return pos;
 }
 
-void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
+void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
     if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
 
@@ -159,23 +160,11 @@ void FactorGraph::LoadEdgeWeights(bool rand, unsigned long seed) {
     std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
-    int pos;
-    bool positive;
+    clause actual_clause;
     for(int i = 0; i < this->NumberClauses; i++) {
-        for (int j = 1; j <= this->NumberVariables; j++) {
-            // j will be the index of the variable j
-            pos = this->Connection(i, j, positive);
-            // If there is a positive connection between i clause and j variable
-            if (pos != -1 && positive) {
-                double value = rand ? (distribution(generator)) : 1.0;
-                this->EdgeWeights[i].push_back(std::pair<int, double>(j, value));
-            } else {
-                // If there is a negative connection between i clause and j variable
-                if (pos != -1 && !positive) {
-                    double value = rand ? distribution(generator) : 1.0;
-                    this->EdgeWeights[i].push_back(std::pair<int, double>(-j, value));
-                }
-            }
+        actual_clause = this->Clause(i);
+        for (int j = 0; j < actual_clause.size(); j++) {
+            this->EdgeWeights[i].push_back(rand ? distribution(generator) : 1.0);
         }
     }
 }
@@ -188,16 +177,14 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
         actual_clause = clause - del;
         // If the clause is not satisfied, remove the variables assigned.
         if (!satisfied[clause]) {
-            for (auto del_v : deleted[clause]) {
+            for (int i = 0; i < deleted[clause].size(); i++) {
                 // Selection of the positive vectors.
-                selected_clauses = del_v > 0 ?
+                selected_clauses = deleted[clause][i] > 0 ?
                         &this->PositiveClauses[actual_clause] : &this->NegativeClauses[actual_clause];
                 // Find the variable to delete in the correct clause.
-                selected_clauses->erase(std::find(selected_clauses->begin(), selected_clauses->end(), abs(del_v)));
+                selected_clauses->erase(std::find(selected_clauses->begin(), selected_clauses->end(), abs(deleted[clause][i])));
                 // We delete the weight of the edge.
-                this->EdgeWeights[actual_clause].erase(
-                        std::find_if(this->EdgeWeights[actual_clause].begin(), this->EdgeWeights[actual_clause].end(),
-                        [del_v](const std::pair<int, double> &edge) { return edge.first == del_v; }));
+                this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
             }
         // If the clause if satisfied, remove it.
         } else {
@@ -415,7 +402,7 @@ std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
     return out;
 }
 
-std::ostream &operator << (std::ostream &out, const clause &clause) {
+std::ostream &operator<<(std::ostream &out, const clause &clause) {
     for (auto i : clause) {
         out << i << " " ;
     }

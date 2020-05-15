@@ -21,7 +21,7 @@ typedef std::vector<int> clause;
 /** Create definition for to umatrix. */
 typedef std::vector<std::vector<unsigned int>> umatrix;
 /** Create definition for wmatrix. */
-typedef std::vector<std::vector<std::pair<int, double>>> wmatrix;
+typedef std::vector<std::vector<double>> wmatrix;
 
 /**
  * @brief Operator == for two clauses.
@@ -55,16 +55,16 @@ private:
     int NumberVariables{0};
 
     /**
-     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjutctive normal form).
+     * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjunctive normal form).
      * and overwrite the Positive and Negative vectors by it's content.
      * @param path: Path to the file.
-     * @param n_clauses: int where the number of clauses that was founded will be storaged.
-     * @param n_variables: int where the number of variables that was founded will be storaged.
+     * @param n_clauses: int where the number of clauses that was founded will be stored.
+     * @param n_variables: int where the number of variables that was founded will be stored.
      */
     void ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables);
 
     /**
-     * @brief Function that loads new clauses vectors. It is used in the PartilAssignment function.
+     * @brief Function that loads new clauses vectors. It is used in the PartialAssignment function.
      * @param deleted: Matrix where each row is the clause where the variable of each column will be deleted.
      * @param satisfied: Vector with the clauses that are satisfied.
      */
@@ -84,25 +84,9 @@ public:
     /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
-     * @param seed: Seed for the random number generator (used for the function LoadEdgeWeights).
+     * @param seed: Seed for the random number generator (used for the function RandomizeWeights).
      */
     explicit FactorGraph(const std::string &path, int seed = 0);
-
-    /**
-     * @brief Getter por PositiveVariables.
-     * @return A constant reference to PositiveVariables.
-     */
-    [[nodiscard]] umatrix getPositiveClauses() const {
-        return this->PositiveVariables;
-    }
-
-    /**
-     * @brief Getter por NegativeVariables.
-     * @return A constant reference to NegativeVariables.
-     */
-    [[nodiscard]] umatrix getNegativeClauses() const {
-        return this->NegativeVariables;
-    }
 
     /**
      * @brief Getter for NumberClauses.
@@ -125,7 +109,7 @@ public:
      * @param search_clause: Clause that will be looked.
      * @return Vector with all the edges of search_clause.
      */
-    std::vector<std::pair<int, double>> getEdge(unsigned int search_clause) {
+    std::vector<double> getEdge(unsigned int search_clause) {
         return this->EdgeWeights[search_clause];
     }
 
@@ -135,15 +119,18 @@ public:
      * @param variable: Variable of the edge.
      * @return The assigned weight of the edge between search_clause and variable.
      */
-    [[nodiscard]] double GetEdgeW(unsigned int search_clause, unsigned int variable) const;
+    [[nodiscard]] double getEdgeW(unsigned int search_clause, unsigned int variable) const;
 
+    [[nodiscard]] wmatrix getMatrix() const {
+        return this->EdgeWeights;
+    }
     /**
      * @brief Change the weight of a specific edge.
      * @param search_clause: Clause of the edge.
      * @param variable: Variable of the edge.
      * @param value: New weight of the edge.
      */
-    void SetEdgeW(unsigned int search_clause, unsigned int variable, double value);
+    void setEdgeW(unsigned int search_clause, unsigned int variable, double value);
 
     /**
      * @brief Check if a variable appears in a search_clause.
@@ -161,7 +148,7 @@ public:
      * @param rand: If true random weights will be generated. If it's not true all weights will be 1. Defaults to true.
      * @param seed: Random seed for the number generator. Defaults to 0.
      */
-    void LoadEdgeWeights(bool rand = true, unsigned long seed = 0);
+    void RandomizeWeights(bool rand = true, unsigned long seed = 0);
 
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where

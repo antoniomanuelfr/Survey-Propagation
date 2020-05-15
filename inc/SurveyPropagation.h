@@ -27,9 +27,9 @@ public:
      * @brief Constructor for the Survey Propagation class.
      * @param AssociatedGraph FactorGraph object with the formula that is going to be used.
      * @param n_iters Maximum number of iterations. Defaults to 1000.
-     * @param precision Precision of the algoritm. Defaults to 0.1.
+     * @param precision Precision of the algorithm. Defaults to 0.1.
      */
-    SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 1000,
+    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 100,
             double precision = 0.1, int seed = 0) {
         this->AssociatedGraph = AssociatedGraph;
         this->n_iters = n_iters;
@@ -44,7 +44,7 @@ public:
      */
     void Update(unsigned int search_clause, unsigned int variable);
 
-    void SP ();
+    bool SP ();
 };
 
 

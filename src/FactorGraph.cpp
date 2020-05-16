@@ -288,6 +288,19 @@ void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uve
                      this->NegativeClauses[clause].cend());
 }
 
+void FactorGraph::ClausesInVariable(unsigned int variable_index, uvector &positive, uvector &negatives) const {
+    if (!positive.empty())
+        positive.clear();
+
+    if (!negatives.empty())
+        negatives.clear();
+
+    positive.insert(positive.begin(), this->PositiveVariables[variable_index].cbegin(),
+                     this->PositiveVariables[variable_index].cend());
+    negatives.insert(negatives.begin(), this->NegativeVariables[variable_index].cbegin(),
+                     this->NegativeVariables[variable_index].cend());
+}
+
 bool FactorGraph::SatisfiesC(const std::vector<bool> &assignment, const clause &search_clause) const {
     int index;
     for (int i : search_clause) {
@@ -341,7 +354,7 @@ std::vector<unsigned int>FactorGraph::getBreakCount(const std::vector<unsigned i
     return break_count;
 }
 
-std::vector<bool> FactorGraph::WalkSAT(int max_tries, int max_flips, double noise, int seed) const {
+std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
     int v;
     std::vector<bool> assignment(this->NumberVariables);
     uvector not_satisfied_clauses, satisfied_clauses, indexes(this->NumberClauses);

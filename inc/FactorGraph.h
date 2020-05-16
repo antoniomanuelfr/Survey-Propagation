@@ -183,6 +183,14 @@ public:
     void VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const;
 
     /**
+     * @brief Look for the positives and negatives clauses of a variable_index.
+     * @param variable_index: variable_index to look.
+     * @param positives: Vector where the clauses in which the variable_index appear as positive will be stored.
+     * @param negatives: Vector where the clauses in which the variable_index appear as negative will be stored.
+     */
+    void ClausesInVariable(unsigned int variable_index, uvector &positive, uvector &negatives) const;
+
+    /**
      * @brief Function that checks if an assignment satisfies or not a given clause.
      * @param assignment: Boolean vector with the assignment (true if positive false if negative).
      * @param search_clause: Clause that will be checked if the assignment satisfies it.
@@ -222,7 +230,7 @@ public:
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
      * an assignment, it will return an empty vector.
      */
-    [[nodiscard]] std::vector<bool> WalkSAT(int max_tries, int max_flips, double noise, int seed = 0) const;
+    [[nodiscard]] std::vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).

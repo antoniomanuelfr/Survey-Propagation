@@ -100,3 +100,14 @@ bool SurveyPropagation::SP() {
     }
     return false;
 }
+
+int SurveyPropagation::SID() {
+
+    // The surveys are randomized by default.
+
+    bool converged = SP();
+    if (converged) {
+        // Decimate process
+    }
+
+}

@@ -21,7 +21,14 @@ private:
     double precision;
     /** Random seed that is going to be used */
     int seed;
+    /**
+     * @brief Function that implements the SP-Update function.
+     * @param search_clause Clause that is going going to be searched.
+     * @param variable Variable that is going to be searched.
+     */
+    void Update(unsigned int search_clause, unsigned int variable);
 
+    bool SP ();
 public:
     /**
      * @brief Constructor for the Survey Propagation class.
@@ -36,15 +43,7 @@ public:
         this->precision = precision;
         this->seed = seed;
     }
-
-    /**
-     * @brief Function that implements the SP-Update function.
-     * @param search_clause Clause that is going going to be searched.
-     * @param variable Variable that is going to be searched.
-     */
-    void Update(unsigned int search_clause, unsigned int variable);
-
-    bool SP ();
+    int SID();
 };
 
 

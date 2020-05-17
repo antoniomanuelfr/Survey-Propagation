@@ -179,25 +179,14 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
             // If the clause is not satisfied, remove the variables assigned.
             if (!satisfied[clause]) {
                 for (int i : deleted[clause]) {
-
-                    if (i > 0) {
-                        auto it = std::find(this->PositiveClauses[actual_clause].begin(),
-                                            this->PositiveClauses[actual_clause].end(), static_cast<unsigned int>(i));
-
-                        this->PositiveClauses[actual_clause].erase(it);
-                    } else {
-                        auto it = std::find(this->NegativeClauses[actual_clause].begin(),
-                                            this->NegativeClauses[actual_clause].end(), abs(i));
-                        this->NegativeClauses[actual_clause].erase(it);
-                    }
                     // Selection of the positive vectors.
-                    /*  selected_clauses = i > 0 ?
-                              &this->PositiveClauses[actual_clause] : &this->NegativeClauses[actual_clause];
-                      // Find the variable to delete in the correct clause.
-                      auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(i));
-                      selected_clauses->erase(it);
-                      */// We delete the weight of the edge. TODO: This causes a SEGFAULT when deleting 2 or more variables.
-                    //this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
+                    selected_clauses = i > 0 ? &this->PositiveClauses[actual_clause] :
+                            &this->NegativeClauses[actual_clause];
+                    // Find the variable to delete in the correct clause.
+                    auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(i));
+                    selected_clauses->erase(it);
+                    // We delete the weight of the edge. TODO: This causes a SEGFAULT when deleting 2 or more variables.
+                    // this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
                 }
                 // If the clause if satisfied, remove it.
             } else {

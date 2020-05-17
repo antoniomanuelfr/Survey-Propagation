@@ -17,13 +17,13 @@
 #include <random>
 #include <unordered_map>
 
-/** Create definition for uvector. */
+/** Create definition for uvector. Stands for an unsigned vector of the standard library. */
 typedef std::vector<unsigned int> uvector;
-/** Create definition for clause. */
+/** Create definition for clause. Stands for an int vector of the standard library. */
 typedef std::vector<int> clause;
-/** Create definition for to umatrix. */
+/** Create definition for to umatrix. Stands for a unsigned int matrix of standard library. */
 typedef std::vector<std::vector<unsigned int>> umatrix;
-/** Create definition for wmatrix. */
+/** Create definition for wmatrix. Stands for a double matrix of the standard library. */
 typedef std::vector<std::vector<double>> wmatrix;
 
 /**
@@ -140,6 +140,10 @@ public:
      */
     [[nodiscard]] double getEdgeW(unsigned int search_clause, unsigned int variable) const;
 
+    /**
+     * @brief Function that return the weights matrix.
+     * @return An wmatrix object.
+     */
     [[nodiscard]] wmatrix getMatrix() const {
         return this->EdgeWeights;
     }
@@ -178,6 +182,16 @@ public:
      * @return A FactorGraph with the partial assignment applied.
      */
     FactorGraph PartialAssignment(const std::vector<int> &assignment);
+
+    /**
+     * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
+     * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
+     * clause where the variable appears as negative.
+     * @param variable: Index of the variable that is going to be checked.
+     * @param assignation: True or false assignation to the variable.
+     * @return A FactorGraph with the partial assignment applied.
+    */
+    FactorGraph PartialAssignment2(unsigned int variable, bool assignation);
 
     /**
      * @brief Return the complete search_clause.
@@ -252,11 +266,14 @@ public:
     [[nodiscard]] std::vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
 
     /**
-     * @brief DPLL implementation for FactorGraph class.
+     * @brief Recursive DPLL implementation for FactorGraph class.
      * @param cnf: Factor graph that will be used in
      * @param depth: Actual depth of the tree.
-     * @return
+     * @return It returns a pair where the first element is an int with the result of the algorithm and the second
+     * element is a vector with the true assignment (if a variable appears as negative, the true assignment to that
+     * variable is false and if the variable appears as positive the true assignment will be true.
      */
+    std::pair<int, std::vector<int>> DPLL(FactorGraph cnf, int depth);
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
@@ -266,9 +283,6 @@ public:
      */
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
 
-    FactorGraph PartialAssignment2(unsigned int variable, bool assignation);
-
-    std::pair<int, std::vector<int>> DPLL(FactorGraph cnf, int depth);
 };
 
 /**

@@ -218,6 +218,7 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
         this->NumberClauses = this->PositiveClauses.size();
     }
 }
+
 FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
     if (assignment.size() != this->NumberVariables)
         return FactorGraph();
@@ -289,7 +290,6 @@ FactorGraph FactorGraph::PartialAssignment2(unsigned int variable, bool assignat
 
     return res;
 }
-
 
 clause FactorGraph::Clause(unsigned int search_clause) const {
     clause ret_clause;

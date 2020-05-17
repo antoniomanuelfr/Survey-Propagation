@@ -170,52 +170,65 @@ void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
 }
 
 void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
-    unsigned int del = 0, actual_clause;
-    uvector *selected_clauses, *selected_variables;
-    clause cl;
-    for (int clause = 0; clause < deleted.size(); clause++) {
-        actual_clause = clause - del;
-        // If the clause is not satisfied, remove the variables assigned.
-        if (!satisfied[clause]) {
-            for (int i = 0; i < deleted[clause].size(); i++) {
-                // Selection of the positive vectors.
-                selected_clauses = deleted[clause][i] > 0 ?
-                        &this->PositiveClauses[actual_clause] : &this->NegativeClauses[actual_clause];
-                // Find the variable to delete in the correct clause.
-                auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(deleted[clause][i]));
-                selected_clauses->erase(it);
-                // We delete the weight of the edge. TODO: This causes a SEGFAULT when deleting 2 or more variables.
-                //this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
-            }
-        // If the clause if satisfied, remove it.
-        } else {
-            cl = this->Clause(actual_clause);
-            if (!cl.empty()) {
-                this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
-                this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
-                this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
-                del++;
-            }
-        }
-    }
-    // Make the Variables vectors with the new assignment.
-    for (auto &v : this->PositiveVariables) {
-        v.clear();
-    }
-    for (auto &v : this->NegativeVariables) {
-        v.clear();
-    }
+    if (this->NumberClauses != 0) {
+        unsigned int del = 0, actual_clause;
+        uvector *selected_clauses, *selected_variables;
+        clause cl;
+        for (int clause = 0; clause < deleted.size(); clause++) {
+            actual_clause = clause - del;
+            // If the clause is not satisfied, remove the variables assigned.
+            if (!satisfied[clause]) {
+                for (int i : deleted[clause]) {
 
-    for (int clause = 0; clause < this->PositiveClauses.size(); clause++) {
-        cl = this->Clause(clause);
-        for (auto var : cl) {
-            selected_variables = var > 0 ? &this->PositiveVariables[var - 1] : &this->NegativeVariables[abs(var) - 1];
-            selected_variables->push_back(clause);
+                    if (i > 0) {
+                        auto it = std::find(this->PositiveClauses[actual_clause].begin(),
+                                            this->PositiveClauses[actual_clause].end(), static_cast<unsigned int>(i));
+
+                        this->PositiveClauses[actual_clause].erase(it);
+                    } else {
+                        auto it = std::find(this->NegativeClauses[actual_clause].begin(),
+                                            this->NegativeClauses[actual_clause].end(), abs(i));
+                        this->NegativeClauses[actual_clause].erase(it);
+                    }
+                    // Selection of the positive vectors.
+                    /*  selected_clauses = i > 0 ?
+                              &this->PositiveClauses[actual_clause] : &this->NegativeClauses[actual_clause];
+                      // Find the variable to delete in the correct clause.
+                      auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(i));
+                      selected_clauses->erase(it);
+                      */// We delete the weight of the edge. TODO: This causes a SEGFAULT when deleting 2 or more variables.
+                    //this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
+                }
+                // If the clause if satisfied, remove it.
+            } else {
+                cl = this->Clause(actual_clause);
+                if (!cl.empty()) {
+                    this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
+                    this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
+                    this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
+                    del++;
+                }
+            }
         }
+        // Make the Variables vectors with the new assignment.
+        for (auto &v : this->PositiveVariables) {
+            v.clear();
+        }
+        for (auto &v : this->NegativeVariables) {
+            v.clear();
+        }
+
+        for (int clause = 0; clause < this->PositiveClauses.size(); clause++) {
+            cl = this->Clause(clause);
+            for (auto var : cl) {
+                selected_variables =
+                        var > 0 ? &this->PositiveVariables[var - 1] : &this->NegativeVariables[abs(var) - 1];
+                selected_variables->push_back(clause);
+            }
+        }
+        this->NumberClauses = this->PositiveClauses.size();
     }
-    this->NumberClauses = this->PositiveClauses.size();
 }
-
 FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
     if (assignment.size() != this->NumberVariables)
         return FactorGraph();
@@ -257,7 +270,7 @@ FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
 
 FactorGraph FactorGraph::PartialAssignment2(unsigned int variable, bool assignation) {
     bool type;
-    FactorGraph res;
+    FactorGraph res(*this);
     int index;
     std::vector<bool> satisfied_clauses(this->NumberClauses, false);
     // This matrix
@@ -451,16 +464,15 @@ std::pair<int, std::vector<int>> FactorGraph::DPLL(FactorGraph cnf, int depth) {
     } else if (cnf.Contradiction()) {
         return std::pair<int, std::vector<int>>(UNSAT, std::vector<int>());
     }
-    FactorGraph aux (cnf);
     assignment[depth + 1] = 1;
-    if (ret = DPLL(cnf.PartialAssignment(assignment), depth + 1); ret.first != UNSAT) {
+    if (ret = DPLL(cnf.PartialAssignment2(depth + 1, true), depth + 1); ret.first != UNSAT) {
         L.second.insert(L.second.end(), ret.second.begin(), ret.second.end());
         L.second.push_back(depth + 1);
         L.first = SAT;
         return L;
     } else {
         assignment[depth + 1] = -1;
-        if (ret = DPLL(cnf.PartialAssignment(assignment), depth + 1); ret.first != UNSAT) {
+        if (ret = DPLL(cnf.PartialAssignment2(depth + 1, false), depth + 1); ret.first != UNSAT) {
             L.second.insert(L.second.end(), ret.second.begin(), ret.second.end());
             L.second.push_back(-(depth + 1));
             L.first = SAT;

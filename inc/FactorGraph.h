@@ -4,7 +4,10 @@
 
 #ifndef FACTOR_GRAPH_H
 #define FACTOR_GRAPH_H
-
+#define SAT 1
+#define PROB_UNSAT 0
+#define UNSAT -1
+#define EMPTY -2
 #include <vector>
 #include <utility>
 #include <iostream>
@@ -102,6 +105,22 @@ public:
      */
     [[nodiscard]] int getNVariables() const {
         return NumberVariables;
+    }
+
+    /**
+     * @brief Check if the formula is an empty clause.
+     * @return True if the formula is an empty clause or false if not
+     */
+    bool EmptyClause() const {
+        return (this->NumberClauses == 0) ;
+    }
+
+    /**
+    * @brief Check if the formula is a contradiction.
+    * @return True if the formula is a contradiction or false if not
+    */
+    bool Contradiction() const {
+        return (this->NumberClauses == 1) && (this->Clause(0).empty());
     }
 
     /**
@@ -231,6 +250,14 @@ public:
      * an assignment, it will return an empty vector.
      */
     [[nodiscard]] std::vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
+
+    /**
+     * @brief DPLL implementation for FactorGraph class.
+     * @param cnf: Factor graph that will be used in
+     * @param depth: Actual depth of the tree.
+     * @return
+     */
+
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
@@ -238,6 +265,10 @@ public:
      * @return Ostream object with the contents of graph.
      */
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
+
+    FactorGraph PartialAssignment2(unsigned int variable, bool assignation);
+
+    std::pair<int, std::vector<int>> DPLL(FactorGraph cnf, int depth);
 };
 
 /**

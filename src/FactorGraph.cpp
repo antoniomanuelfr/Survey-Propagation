@@ -182,17 +182,20 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
                 selected_clauses = deleted[clause][i] > 0 ?
                         &this->PositiveClauses[actual_clause] : &this->NegativeClauses[actual_clause];
                 // Find the variable to delete in the correct clause.
-                selected_clauses->erase(std::find(selected_clauses->begin(), selected_clauses->end(), abs(deleted[clause][i])));
-                // We delete the weight of the edge.
-                this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
+                auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(deleted[clause][i]));
+                selected_clauses->erase(it);
+                // We delete the weight of the edge. TODO: This causes a SEGFAULT when deleting 2 or more variables.
+                //this->EdgeWeights[clause].erase(this->EdgeWeights[clause].begin() + i);
             }
         // If the clause if satisfied, remove it.
         } else {
             cl = this->Clause(actual_clause);
-            this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
-            this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
-            this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
-            del++;
+            if (!cl.empty()) {
+                this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
+                this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
+                this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
+                del++;
+            }
         }
     }
     // Make the Variables vectors with the new assignment.
@@ -251,6 +254,40 @@ FactorGraph FactorGraph::PartialAssignment(const std::vector<int> &assignment) {
     res.ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
     return res;
 }
+
+FactorGraph FactorGraph::PartialAssignment2(unsigned int variable, bool assignation) {
+    bool type;
+    FactorGraph res;
+    int index;
+    std::vector<bool> satisfied_clauses(this->NumberClauses, false);
+    // This matrix
+    std::vector<std::vector<int>> deleted_variables_from_clauses;
+    deleted_variables_from_clauses.resize(this->NumberClauses);
+        // If the variable i changes.
+    for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
+        index = this->Connection(search_clause, variable + 1, type);
+        // If the variable i is in search_clause.
+        if (index != -1) {
+            // If the variable appears as negative and we assign it to true.
+            if (!type && assignation) {
+                deleted_variables_from_clauses[search_clause].push_back(-(variable + 1));
+                // If the variable appears as positive and we assign it to negative.
+            } else if (type && !assignation) {
+                deleted_variables_from_clauses[search_clause].push_back(variable + 1);
+            }
+                // If the variable appears as positive and we assign it to positive or
+                // If the variable appears as negative and we assign it to negative,
+                // the clause will be satisfied and deleted.
+            else {
+                satisfied_clauses[search_clause] = true;
+            }
+        }
+    }
+    res.ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
+
+    return res;
+}
+
 
 clause FactorGraph::Clause(unsigned int search_clause) const {
     clause ret_clause;
@@ -353,7 +390,7 @@ std::vector<unsigned int>FactorGraph::getBreakCount(const std::vector<unsigned i
     }
     return break_count;
 }
-
+// TODO: Improve WalkSAT implementation.
 std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
     int v;
     std::vector<bool> assignment(this->NumberVariables);
@@ -404,7 +441,36 @@ std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_
     return std::vector<bool>();
 }
 
-std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
+std::pair<int, std::vector<int>> FactorGraph::DPLL(FactorGraph cnf, int depth) {
+    std::vector<int> assignment(this->NumberVariables, 0);
+    std::pair<int,std::vector<int>> ret, L;
+    // If the entry cnf is empty clause.
+    if (cnf.EmptyClause()) {
+        return std::pair<int, std::vector<int>>(EMPTY, std::vector<int>());
+    // If the cnf is a contradiction.
+    } else if (cnf.Contradiction()) {
+        return std::pair<int, std::vector<int>>(UNSAT, std::vector<int>());
+    }
+    FactorGraph aux (cnf);
+    assignment[depth + 1] = 1;
+    if (ret = DPLL(cnf.PartialAssignment(assignment), depth + 1); ret.first != UNSAT) {
+        L.second.insert(L.second.end(), ret.second.begin(), ret.second.end());
+        L.second.push_back(depth + 1);
+        L.first = SAT;
+        return L;
+    } else {
+        assignment[depth + 1] = -1;
+        if (ret = DPLL(cnf.PartialAssignment(assignment), depth + 1); ret.first != UNSAT) {
+            L.second.insert(L.second.end(), ret.second.begin(), ret.second.end());
+            L.second.push_back(-(depth + 1));
+            L.first = SAT;
+            return L;
+        }
+    }
+    return L;
+}
+
+std::ostream &operator << (std::ostream &out, const FactorGraph &graph) {
     out << "p cnf " << graph.NumberVariables << " " << graph.NumberClauses << std::endl;
     for (int i = 0; i < graph.NumberClauses; i++) {
         for (int it : graph.Clause(i)) {
@@ -415,7 +481,7 @@ std::ostream &operator<<(std::ostream &out, const FactorGraph &graph) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const clause &clause) {
+std::ostream &operator << (std::ostream &out, const clause &clause) {
     for (auto i : clause) {
         out << i << " " ;
     }

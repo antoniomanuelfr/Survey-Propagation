@@ -181,15 +181,12 @@ public:
     void RandomizeWeights(bool rand = true, unsigned long seed = 0);
 
     /**
-     * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
-     * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
-     * clause where the variable appears as negative. This function is used in the SP function.
-     * @param variable: Index of the variable that is going to be checked.
-     * @param assignation: True or false assignation to the variable.
-     * @param unit_vars: Vector where the founded unit vars will be stored.
-     * @return A FactorGraph with the partial assignment applied.
+     * @brief Function that performs Unit Propagation. If a variable is a unit variable, the assignment of that variable
+     * is defined by the value of that variable (if the unit variable appears as positive, the assignment will be true
+     * and if the variable appears as negative the assignment will be false).
+     * @return
      */
-    FactorGraph PartialAssignmentUP(unsigned int variable, bool assignation, std::vector<unsigned int> &unit_vars);
+    FactorGraph UnitPropagation();
 
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
@@ -241,25 +238,23 @@ public:
 
     /**
      * @brief Function that checks if an assignment satisfies or not the formula.
-     * @param assignment: Boolean vector with the assignment (true if positive false if negative).
-     * @param not_satisfied_clauses: Vector that will store the not satisfied clauses.
-     * @param satisfied_clauses: Vector that will store the satisfied clauses.
+     * @param assign: Boolean vector with the assignment (true if positive false if negative).
+     * @param n_sat_clauses: Vector that will store the not satisfied clauses.
+     * @param sat_clauses: Vector that will store the satisfied clauses.
      * @return true if the formula is satisfied and false if not.
      */
-    bool SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
-                    std::vector<unsigned int> &satisfied_clauses, std::vector<unsigned int> &indexes) const;
+    bool SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_clauses, uvector &sat_clauses, uvector &indxs) const;
 
     /**
      * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
      * flipped and count the number of clauses that are still satisfied.
-     * @param satis_clauses: Clauses that are satisfied with the given assignment.
+     * @param sat_clauses: Clauses that are satisfied with the given assignment.
      * @param s_clause: Clause.
-     * @param assignment: True assigment that will be used.
+     * @param assign: True assigment that will be used.
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
      * variable of the clause.
      */
-    [[nodiscard]] std::vector<unsigned int> getBreakCount(const std::vector<unsigned int> &satis_clauses, const clause &s_clause,
-                                            const std::vector<bool> &assignment) const;
+    [[nodiscard]] uvector getBreakCount(const uvector &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const;
 
     /**
      * @brief WalkSAT algorithm for FactorGraph class.

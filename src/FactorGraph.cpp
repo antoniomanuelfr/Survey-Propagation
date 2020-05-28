@@ -184,6 +184,10 @@ void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
     }
 }
 
+FactorGraph FactorGraph::UnitPropagation() {
+    return FactorGraph();
+}
+
 void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
     if (this->NumberClauses != 0) {
         unsigned int del = 0, actual_clause;
@@ -193,27 +197,25 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
             actual_clause = clause - del;
             // If the clause is not satisfied, remove the variables assigned.
             if (!satisfied[clause]) {
-                for (int i : deleted[clause]) {
+                for (int variable : deleted[clause]) {
                     // Selection of the positive vectors.
-                    selected_clauses = i > 0 ? &this->PositiveClauses[actual_clause] :
-                            &this->NegativeClauses[actual_clause];
+                    selected_clauses = variable > 0 ? &this->PositiveClauses[actual_clause] :
+                                       &this->NegativeClauses[actual_clause];
                     // Find the variable to delete in the correct clause.
-                    auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(i));
+                    auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(variable));
                     selected_clauses->erase(it);
-                    unsigned int diff = std::distance(selected_clauses->begin(), it);
-                    diff = i > 0 ? diff : this->PositiveClauses[actual_clause].size() + diff;
+                    unsigned int diff = std::distance(selected_clauses->begin(), it) +
+                            (variable > 0 ? 0 : this->PositiveClauses[actual_clause].size());
                     // We delete the weight of the edge.
                     this->EdgeWeights[actual_clause].erase(this->EdgeWeights[actual_clause].begin() + diff);
                 }
                 // If the clause if satisfied, remove it.
             } else {
-                cl = this->Clause(actual_clause);
-                if (!cl.empty()) {
-                    this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
-                    this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
-                    this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
-                    del++;
-                }
+                this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
+                this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
+                this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
+                del++;
+
             }
         }
         // Make the Variables vectors with the new assignment.
@@ -234,58 +236,6 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
         }
         this->NumberClauses = this->PositiveClauses.size();
     }
-}
-
-FactorGraph FactorGraph::PartialAssignmentUP(unsigned int variable, bool assignation, std::vector<unsigned int> &unit_vars) {
-
-    if (!unit_vars.empty()) {
-        unit_vars.clear();
-    }
-    bool type;
-    FactorGraph res(*this);
-    int index;
-    std::vector<bool> satisfied_clauses(this->NumberClauses, false);
-    // This matrix
-    std::vector<std::vector<int>> deleted_variables_from_clauses;
-    deleted_variables_from_clauses.resize(this->NumberClauses);
-    // If the variable i changes.
-    for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
-        index = this->Connection(search_clause, variable + 1, type);
-        // If the variable i is in search_clause.
-        if (index != -1) {
-            // If the variable appears as negative and we assign it to true.
-            if (!type && assignation) {
-                deleted_variables_from_clauses[search_clause].push_back(-(variable + 1));
-                // If the variable appears as positive and we assign it to negative.
-            } else if (type && !assignation) {
-                deleted_variables_from_clauses[search_clause].push_back(variable + 1);
-            }
-                // If the variable appears as positive and we assign it to positive or
-                // If the variable appears as negative and we assign it to negative,
-                // the clause will be satisfied and deleted.
-            else {
-                satisfied_clauses[search_clause] = true;
-            }
-        }
-    }
-    for (int clause = 0; clause < deleted_variables_from_clauses.size(); clause++) {
-        // If the difference of the size of a clause and the deleted clauses is one, we have a unit clause.
-        if ((this->PositiveClauses[clause].size() + this->NegativeClauses[clause].size()) -
-            deleted_variables_from_clauses[clause].size() == 1) {
-            for (auto it : deleted_variables_from_clauses[clause]) {
-                std::vector<unsigned int>::iterator a;
-                if (it > 0) {
-                    a = std::find(this->PositiveClauses[clause].begin(), this->PositiveClauses[clause].end(), it);
-                } else {
-                    a = std::find(this->NegativeClauses[clause].begin(), this->NegativeClauses[clause].end(), it);
-                }
-                unit_vars.push_back(*a);
-            }
-        }
-    }
-    res.ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
-
-    return res;
 }
 
 FactorGraph FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
@@ -381,47 +331,46 @@ bool FactorGraph::SatisfiesC(const std::vector<bool> &assignment, const clause &
     return false;
 }
 
-bool FactorGraph::SatisfiesF(const std::vector<bool> &assignment, std::vector<unsigned int> &not_satisfied_clauses,
-                             std::vector<unsigned int> &satisfied_clauses, std::vector<unsigned int> &indexes) const {
+bool FactorGraph::SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_clauses, uvector &sat_clauses, uvector &indxs) const {
 
-    if (!not_satisfied_clauses.empty()) {
-        not_satisfied_clauses.clear();
+    if (!n_sat_clauses.empty()) {
+        n_sat_clauses.clear();
     }
-    if (!satisfied_clauses.empty()) {
-        satisfied_clauses.clear();
+    if (!sat_clauses.empty()) {
+        sat_clauses.clear();
     }
 
     bool satisfied_formula = true;
-    for (auto search_clause : indexes) {
-        if (!this->SatisfiesC(assignment, this->Clause(search_clause))) {
+    for (auto search_clause : indxs) {
+        if (!this->SatisfiesC(assign, this->Clause(search_clause))) {
             satisfied_formula = false;
-            not_satisfied_clauses.push_back(search_clause);
+            n_sat_clauses.push_back(search_clause);
         } else {
-            satisfied_clauses.push_back(search_clause);
+            sat_clauses.push_back(search_clause);
         }
     }
     return satisfied_formula;
 }
 
-std::vector<unsigned int>FactorGraph::getBreakCount(const std::vector<unsigned int> &satis_clauses,
-                                                    const clause &s_clause, const std::vector<bool> &assignment) const {
+uvector FactorGraph::getBreakCount(const uvector &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const {
 
-    std::vector<unsigned int> break_count(s_clause.size(), 0);
+    uvector break_count(s_clause.size(), 0);
     std::vector<bool> sat_vars;
     int index;
     clause c;
-    for (auto clause_index : satis_clauses) {
+    for (auto clause_index : sat_clauses) {
         c = this->Clause(clause_index);
         for (int i = 0; i < s_clause.size(); i++) {
             index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
             // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
-            if (!((assignment[index] && c[i] < 0) || (!assignment[index] && c[i] > 0))) {
+            if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
                 break_count[i]++;
             }
         }
     }
     return break_count;
 }
+
 // TODO: Improve WalkSAT implementation.
 std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
     int v;
@@ -442,7 +391,7 @@ std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_
             std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
             // We get a random not satisfied clause
             clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
-            std::vector<unsigned int> count = this->getBreakCount(satisfied_clauses, C, assignment);
+            uvector count = this->getBreakCount(satisfied_clauses, C, assignment);
             // Check if there is any variable of C with break count equal to 0.
             bool find = false;
             for (int j = 0; j < count.size(); j++) {

@@ -177,12 +177,10 @@ int SurveyPropagation::SID(std::vector<bool> &true_assignment) {
         // Decimate process, check if the surveys aren't trivial.
         if (!trivial_surveys) {
             this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
-            assignment[max_index] = positive_w[max_index] > negative_w[max_index] ? 1 : 0;
-            this->AssociatedGraph.PartialAssignment(assignment);
+            this->AssociatedGraph.PartialAssignment(max_index, positive_w[max_index] > negative_w[max_index]);
         } else {
             walksat_assignment = this->AssociatedGraph.WalkSAT(
                     this->walksat_iters, this->walksat_flips, this->walksat_noise, this->seed);
-
             // If WalkSAT has found an assignment, return the assignment.
             if (!walksat_assignment.empty()) {
                 true_assignment = walksat_assignment;

@@ -111,7 +111,7 @@ public:
      * @brief Check if the formula is an empty clause.
      * @return True if the formula is an empty clause or false if not
      */
-    bool EmptyClause() const {
+    [[nodiscard]] bool EmptyClause() const {
         return (this->NumberClauses == 0) ;
     }
 
@@ -119,7 +119,7 @@ public:
     * @brief Check if the formula is a contradiction.
     * @return True if the formula is a contradiction or false if not
     */
-    bool Contradiction() const {
+    [[nodiscard]] bool Contradiction() const {
         return (this->NumberClauses == 1) && (this->Clause(0).empty());
     }
 
@@ -147,6 +147,13 @@ public:
     [[nodiscard]] wmatrix getMatrix() const {
         return this->EdgeWeights;
     }
+
+    /**
+     * @brief Function that returns the unit vars.
+     * @return A vector with the unit variables of the formula.
+     */
+    [[nodiscard]] uvector getUnitVars() const;
+
     /**
      * @brief Change the weight of a specific edge.
      * @param search_clause: Clause of the edge.
@@ -176,12 +183,13 @@ public:
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
      * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
-     * clause where the variable appears as negative.
-     * @param assignment: int vector. If the i position is 1, it represent that the i variable will be true.
-     * If the position is 0, it will be ignored and if it is -1, it will be consider as false.
+     * clause where the variable appears as negative. This function is used in the SP function.
+     * @param variable: Index of the variable that is going to be checked.
+     * @param assignation: True or false assignation to the variable.
+     * @param unit_vars: Vector where the founded unit vars will be stored.
      * @return A FactorGraph with the partial assignment applied.
      */
-    FactorGraph PartialAssignment(const std::vector<int> &assignment);
+    FactorGraph PartialAssignmentUP(unsigned int variable, bool assignation, std::vector<unsigned int> &unit_vars);
 
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
@@ -191,7 +199,7 @@ public:
      * @param assignation: True or false assignation to the variable.
      * @return A FactorGraph with the partial assignment applied.
     */
-    FactorGraph PartialAssignment2(unsigned int variable, bool assignation);
+    FactorGraph PartialAssignment(unsigned int variable, bool assignation);
 
     /**
      * @brief Return the complete search_clause.
@@ -266,23 +274,12 @@ public:
     [[nodiscard]] std::vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
 
     /**
-     * @brief Recursive DPLL implementation for FactorGraph class.
-     * @param cnf: Factor graph that will be used in
-     * @param depth: Actual depth of the tree.
-     * @return It returns a pair where the first element is an int with the result of the algorithm and the second
-     * element is a vector with the true assignment (if a variable appears as negative, the true assignment to that
-     * variable is false and if the variable appears as positive the true assignment will be true.
-     */
-    std::pair<int, std::vector<int>> DPLL(FactorGraph cnf, int depth);
-
-    /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
      * @param graph: Factor graph object that will be printed out.
      * @return Ostream object with the contents of graph.
      */
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
-
 };
 
 /**

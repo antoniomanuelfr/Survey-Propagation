@@ -185,7 +185,12 @@ void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
 }
 
 FactorGraph FactorGraph::UnitPropagation() {
-    return FactorGraph();
+    FactorGraph prev;
+    uvector unit_vars = this->getUnitVars();
+    for (auto unit_var : unit_vars) {
+        prev = this->PartialAssignment(unit_var - 1, unit_var > 0);
+    }
+    return prev;
 }
 
 void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {

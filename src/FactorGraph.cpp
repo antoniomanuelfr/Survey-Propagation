@@ -184,13 +184,11 @@ void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
     }
 }
 
-FactorGraph FactorGraph::UnitPropagation() {
-    FactorGraph prev;
+void FactorGraph::UnitPropagation() {
     uvector unit_vars = this->getUnitVars();
     for (auto unit_var : unit_vars) {
-        prev = this->PartialAssignment(unit_var - 1, unit_var > 0);
+        this->PartialAssignment(unit_var - 1, unit_var > 0);
     }
-    return prev;
 }
 
 void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
@@ -243,9 +241,8 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
     }
 }
 
-FactorGraph FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
+void FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
     bool type;
-    FactorGraph res(*this);
     int index;
     std::vector<bool> satisfied_clauses(this->NumberClauses, false);
     // This matrix
@@ -271,9 +268,7 @@ FactorGraph FactorGraph::PartialAssignment(unsigned int variable, bool assignati
             }
         }
     }
-    res.ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
-
-    return res;
+    this->ApplyNewClauses(deleted_variables_from_clauses, satisfied_clauses);
 }
 
 clause FactorGraph::Clause(unsigned int search_clause) const {
@@ -406,11 +401,13 @@ std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_
                     break;
                 }
             }
+            // If there is not any variable with break count equal to zero
             if (!find) {
+                // We choose a random v of C
                 if (double_dist(gen) > noise) {
-                    // We choose a random v of C
                     std::uniform_int_distribution<int> dis(0, C.size() - 1);
                     v = dis(gen);
+                // We choose tha variable with lower break count
                 } else {
                     v = std::distance(count.begin(), std::min_element(count.begin(), count.end()));
                 }

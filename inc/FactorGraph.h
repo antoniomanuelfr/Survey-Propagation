@@ -186,7 +186,7 @@ public:
      * and if the variable appears as negative the assignment will be false).
      * @return
      */
-    FactorGraph UnitPropagation();
+    void UnitPropagation();
 
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
@@ -196,7 +196,7 @@ public:
      * @param assignation: True or false assignation to the variable.
      * @return A FactorGraph with the partial assignment applied.
     */
-    FactorGraph PartialAssignment(unsigned int variable, bool assignation);
+    void PartialAssignment(unsigned int variable, bool assignation);
 
     /**
      * @brief Return the complete search_clause.

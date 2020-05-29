@@ -283,12 +283,14 @@ clause FactorGraph::Clause(unsigned int search_clause) const {
     return ret_clause;
 }
 
-uvector FactorGraph::ClausesOfVariable(unsigned int variable) const {
+uvector FactorGraph::ClausesOfVariable(int variable) const {
     uvector ret_clause;
+    unsigned int conv_variable = variable > 0 ? variable - 1 : abs(variable) - 1;
+    ret_clause.reserve(this->PositiveVariables.size() + this->NegativeVariables.size());
     if (variable < this->NumberVariables) {
-        ret_clause = this->PositiveVariables[variable - 1];
+        ret_clause = this->PositiveVariables[conv_variable];
 
-        for (auto it : this->NegativeVariables[variable - 1])
+        for (auto it : this->NegativeVariables[conv_variable])
             ret_clause.push_back(it);
     }
     return ret_clause;
@@ -339,6 +341,8 @@ bool FactorGraph::SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_cla
     if (!sat_clauses.empty()) {
         sat_clauses.clear();
     }
+    n_sat_clauses.reserve(this->NumberClauses);
+    sat_clauses.reserve(this->NumberClauses);
 
     bool satisfied_formula = true;
     for (auto search_clause : indxs) {
@@ -352,19 +356,24 @@ bool FactorGraph::SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_cla
     return satisfied_formula;
 }
 
-uvector FactorGraph::getBreakCount(const uvector &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const {
+uvector FactorGraph::getBreakCount(const std::vector<bool> &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const {
 
     uvector break_count(s_clause.size(), 0);
-    std::vector<bool> sat_vars;
+    uvector ca;
     int index;
     clause c;
-    for (auto clause_index : sat_clauses) {
-        c = this->Clause(clause_index);
-        for (int i = 0; i < s_clause.size(); i++) {
-            index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
-            // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
-            if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
-                break_count[i]++;
+    for (int i = 0; i < s_clause.size(); i++) {
+        // Get the clauses where each variable appears.
+        ca = this->ClausesOfVariable(s_clause[i]);
+        for (auto clause_index : ca) {
+            // If the clause is satisfied, we calculate the break count of that variable
+            if (sat_clauses[clause_index]) {
+                c = this->Clause(clause_index);
+                index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
+                // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
+                if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
+                    break_count[i]++;
+                }
             }
         }
     }
@@ -374,16 +383,19 @@ uvector FactorGraph::getBreakCount(const uvector &sat_clauses, const clause &s_c
 // TODO: Improve WalkSAT implementation.
 std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
     int v;
+
     std::vector<bool> assignment(this->NumberVariables);
-    uvector not_satisfied_clauses, satisfied_clauses, indexes(this->NumberClauses);
+    std::vector<bool> sat_clauses(this->NumberClauses, false);
+    uvector not_satisfied_clauses, satisfied_clauses, indexes(this->NumberClauses), n_sat, sat;
+
     std::default_random_engine gen(seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
+    std::iota(indexes.begin(), indexes.end(), 0);
     for (int i = 0; i < max_tries; i++) {
+        std::cout << i << std::endl;
         std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen)); });
-        std::iota(indexes.begin(), indexes.end(), 0);
-
         for (int flips = 0; flips < max_flips; flips++) {
             if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses, indexes)) {
                 return assignment;
@@ -391,7 +403,7 @@ std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_
             std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
             // We get a random not satisfied clause
             clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
-            uvector count = this->getBreakCount(satisfied_clauses, C, assignment);
+            uvector count = this->getBreakCount(sat_clauses, C, assignment);
             // Check if there is any variable of C with break count equal to 0.
             bool find = false;
             for (int j = 0; j < count.size(); j++) {

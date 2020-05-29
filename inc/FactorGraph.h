@@ -210,7 +210,7 @@ public:
      * @param variable: Variable to look for.
      * @return A vector with the clauses where variable appears.
      */
-    [[nodiscard]] uvector ClausesOfVariable(unsigned int variable) const;
+    [[nodiscard]] uvector ClausesOfVariable(int variable) const;
 
     /**
      * @brief Look for the positives and negatives variables in a clause.
@@ -254,7 +254,7 @@ public:
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
      * variable of the clause.
      */
-    [[nodiscard]] uvector getBreakCount(const uvector &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const;
+    [[nodiscard]] uvector getBreakCount(const std::vector<bool> &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const;
 
     /**
      * @brief WalkSAT algorithm for FactorGraph class.

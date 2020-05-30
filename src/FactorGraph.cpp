@@ -84,7 +84,7 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
         // Skip the comments.
         while (getline(input_file, line) && line[0] == 'c');
         // Split the string
-        std::vector<std::string> split = SplitString(line);
+        vector<std::string> split = SplitString(line);
 
         // Check if the first line after the comments is the DIMACS header.
         if (!split.empty() && split[0] == "p" && split[1] == "cnf") {
@@ -191,7 +191,7 @@ void FactorGraph::UnitPropagation() {
     }
 }
 
-void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied) {
+void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vector<bool> &satisfied) {
     if (this->NumberClauses != 0) {
         unsigned int del = 0, actual_clause;
         uvector *selected_clauses, *selected_variables;
@@ -244,9 +244,9 @@ void FactorGraph::ApplyNewClauses(const std::vector<std::vector<int>> &deleted, 
 void FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
     bool type;
     int index;
-    std::vector<bool> satisfied_clauses(this->NumberClauses, false);
+    vector<bool> satisfied_clauses(this->NumberClauses, false);
     // This matrix
-    std::vector<std::vector<int>> deleted_variables_from_clauses;
+    vector<vector<int>> deleted_variables_from_clauses;
     deleted_variables_from_clauses.resize(this->NumberClauses);
         // If the variable i changes.
     for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
@@ -285,12 +285,12 @@ clause FactorGraph::Clause(unsigned int search_clause) const {
 
 uvector FactorGraph::ClausesOfVariable(int variable) const {
     uvector ret_clause;
-    unsigned int conv_variable = variable > 0 ? variable - 1 : abs(variable) - 1;
+    unsigned int variable_c = variable > 0 ? variable - 1 : abs(variable) - 1;
     ret_clause.reserve(this->PositiveVariables.size() + this->NegativeVariables.size());
     if (variable < this->NumberVariables) {
-        ret_clause = this->PositiveVariables[conv_variable];
+        ret_clause = this->PositiveVariables[variable_c];
 
-        for (auto it : this->NegativeVariables[conv_variable])
+        for (auto it : this->NegativeVariables[variable_c])
             ret_clause.push_back(it);
     }
     return ret_clause;
@@ -322,7 +322,7 @@ void FactorGraph::ClausesInVariable(unsigned int variable_index, uvector &positi
                      this->NegativeVariables[variable_index].cend());
 }
 
-bool FactorGraph::SatisfiesC(const std::vector<bool> &assignment, const clause &search_clause) const {
+bool FactorGraph::SatisfiesC(const vector<bool> &assignment, const clause &search_clause) const {
     int index;
     for (int i : search_clause) {
         index = i > 0 ? i - 1 : abs(i) - 1;
@@ -333,39 +333,29 @@ bool FactorGraph::SatisfiesC(const std::vector<bool> &assignment, const clause &
     return false;
 }
 
-bool FactorGraph::SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_clauses, uvector &sat_clauses, uvector &indxs) const {
+bool FactorGraph::SatisfiesF(const vector<bool> &assign, vector<bool> &sat, const uvector &indxs) const {
 
-    if (!n_sat_clauses.empty()) {
-        n_sat_clauses.clear();
-    }
-    if (!sat_clauses.empty()) {
-        sat_clauses.clear();
-    }
-    n_sat_clauses.reserve(this->NumberClauses);
-    sat_clauses.reserve(this->NumberClauses);
-
+    bool sat_clause;
     bool satisfied_formula = true;
     for (auto search_clause : indxs) {
-        if (!this->SatisfiesC(assign, this->Clause(search_clause))) {
+        if (sat_clause = this->SatisfiesC(assign, this->Clause(search_clause)), !sat_clause) {
             satisfied_formula = false;
-            n_sat_clauses.push_back(search_clause);
-        } else {
-            sat_clauses.push_back(search_clause);
         }
+        sat[search_clause] = sat_clause;
     }
     return satisfied_formula;
 }
 
-uvector FactorGraph::getBreakCount(const std::vector<bool> &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const {
+uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause &s_clause, const vector<bool> &assign,
+                                   unsigned int &min_index) const {
 
     uvector break_count(s_clause.size(), 0);
-    uvector ca;
     int index;
     clause c;
+    unsigned int min = this->NumberClauses;
     for (int i = 0; i < s_clause.size(); i++) {
         // Get the clauses where each variable appears.
-        ca = this->ClausesOfVariable(s_clause[i]);
-        for (auto clause_index : ca) {
+        for (auto clause_index : this->ClausesOfVariable(s_clause[i])) {
             // If the clause is satisfied, we calculate the break count of that variable
             if (sat_clauses[clause_index]) {
                 c = this->Clause(clause_index);
@@ -373,20 +363,23 @@ uvector FactorGraph::getBreakCount(const std::vector<bool> &sat_clauses, const c
                 // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
                 if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
                     break_count[i]++;
+                    }
                 }
             }
+        if (break_count[i] < min) {
+            min = break_count[i];
+            min_index = i;
         }
     }
     return break_count;
 }
 
-// TODO: Improve WalkSAT implementation.
-std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
-    int v;
-
-    std::vector<bool> assignment(this->NumberVariables);
-    std::vector<bool> sat_clauses(this->NumberClauses, false);
-    uvector not_satisfied_clauses, satisfied_clauses, indexes(this->NumberClauses), n_sat, sat;
+vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
+    unsigned int min_index, v;
+    bool sat;
+    vector<bool> assignment(this->NumberVariables);
+    vector<bool> sat_clauses(this->NumberClauses, false);
+    uvector not_satisfied_clauses, indexes(this->NumberClauses);
 
     std::default_random_engine gen(seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
@@ -394,42 +387,55 @@ std::vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_
 
     std::iota(indexes.begin(), indexes.end(), 0);
     for (int i = 0; i < max_tries; i++) {
-        std::cout << i << std::endl;
-        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen)); });
+        std::generate(assignment.begin(), assignment.end(),
+                [&bdist, &gen]() { return static_cast<bool>(bdist(gen)); } );
+
         for (int flips = 0; flips < max_flips; flips++) {
-            if (this->SatisfiesF(assignment, not_satisfied_clauses, satisfied_clauses, indexes)) {
+            // Get the clauses state of the clauses with the given assignment.
+            this->SatisfiesF(assignment, sat_clauses, indexes);
+            not_satisfied_clauses.clear();
+            sat = true;
+            // Check if the assignment satisfies the formula. Save the not satisfied clauses in an auxiliary vector.
+            for (int clause = 0; clause < sat_clauses.size(); clause++) {
+                if (!sat_clauses[clause]) {
+                    sat = false;
+                    not_satisfied_clauses.push_back(clause);
+                }
+            }
+            // If the formula is satisfied, return the assignment.
+            if (sat) {
                 return assignment;
             }
+
             std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
             // We get a random not satisfied clause
             clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
-            uvector count = this->getBreakCount(sat_clauses, C, assignment);
+            uvector count = this->getBreakCount(sat_clauses, C, assignment, min_index);
             // Check if there is any variable of C with break count equal to 0.
-            bool find = false;
-            for (int j = 0; j < count.size(); j++) {
-                if (count[j]) {
-                    find = true;
-                    v = j;
-                    break;
-                }
-            }
-            // If there is not any variable with break count equal to zero
-            if (!find) {
-                // We choose a random v of C
+            if (count[min_index] == 0) {
+                v = min_index;
+
+            } else { // If there the variable with the lower break count isn't zero.
+                // We choose a random v of C.
                 if (double_dist(gen) > noise) {
-                    std::uniform_int_distribution<int> dis(0, C.size() - 1);
+                    std::uniform_int_distribution<unsigned int> dis(0, C.size() - 1);
                     v = dis(gen);
                 // We choose tha variable with lower break count
                 } else {
-                    v = std::distance(count.begin(), std::min_element(count.begin(), count.end()));
+                    v = min_index;
                 }
             }
+            // Get the index of the variable that will be flipped
             int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
+            // Flip the variable
             assignment[index] = !assignment[index];
+            // Check if the new assignment satisfies the clauses where the selected variable appears.
+            not_satisfied_clauses.clear();
+            // We update the variables that are going to be searched
+            indexes = this->ClausesOfVariable(C[v]);
         }
-
     }
-    return std::vector<bool>();
+    return vector<bool>();
 }
 
 std::ostream &operator << (std::ostream &out, const FactorGraph &graph) {
@@ -451,12 +457,12 @@ std::ostream &operator << (std::ostream &out, const clause &clause) {
     return out;
 }
 
-std::vector<std::string> SplitString(const std::string &str, char delim) {
+vector<std::string> SplitString(const std::string &str, char delim) {
     if (str.empty()) {
-        return std::vector<std::string>();
+        return vector<std::string>();
     }
     // Vector with the sub-strings
-    std::vector<std::string> cont;
+    vector<std::string> cont;
     std::size_t current, previous = 0;
     // Find the first delimiter
     current = str.find(delim);

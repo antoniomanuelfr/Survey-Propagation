@@ -17,14 +17,16 @@
 #include <random>
 #include <unordered_map>
 
+using std::vector;
+
 /** Create definition for uvector. Stands for an unsigned vector of the standard library. */
-typedef std::vector<unsigned int> uvector;
+typedef vector<unsigned int> uvector;
 /** Create definition for clause. Stands for an int vector of the standard library. */
-typedef std::vector<int> clause;
+typedef vector<int> clause;
 /** Create definition for to umatrix. Stands for a unsigned int matrix of standard library. */
-typedef std::vector<std::vector<unsigned int>> umatrix;
+typedef vector<vector<unsigned int>> umatrix;
 /** Create definition for wmatrix. Stands for a double matrix of the standard library. */
-typedef std::vector<std::vector<double>> wmatrix;
+typedef vector<vector<double>> wmatrix;
 
 /**
  * @brief Operator == for two clauses.
@@ -71,7 +73,7 @@ private:
      * @param deleted: Matrix where each row is the clause where the variable of each column will be deleted.
      * @param satisfied: Vector with the clauses that are satisfied.
      */
-    void ApplyNewClauses(const std::vector<std::vector<int>> &deleted, const std::vector<bool> &satisfied);
+    void ApplyNewClauses(const vector<vector<int>> &deleted, const vector<bool> &satisfied);
 
 public:
     /**
@@ -128,7 +130,7 @@ public:
      * @param search_clause: Clause that will be looked.
      * @return Vector with all the edges of search_clause.
      */
-    std::vector<double> getEdge(unsigned int search_clause) {
+    vector<double> getEdge(unsigned int search_clause) {
         return this->EdgeWeights[search_clause];
     }
 
@@ -234,16 +236,17 @@ public:
      * @param search_clause: Clause that will be checked if the assignment satisfies it.
      * @return true if the clause is satisfied and false if not.
      */
-    [[nodiscard]] bool SatisfiesC(const std::vector<bool> &assignment, const clause &search_clause) const;
+    [[nodiscard]] bool SatisfiesC(const vector<bool> &assignment, const clause &search_clause) const;
 
     /**
      * @brief Function that checks if an assignment satisfies or not the formula.
      * @param assign: Boolean vector with the assignment (true if positive false if negative).
      * @param n_sat_clauses: Vector that will store the not satisfied clauses.
-     * @param sat_clauses: Vector that will store the satisfied clauses.
+     * @param sat: Vector that will store the satisfied clauses.
      * @return true if the formula is satisfied and false if not.
      */
-    bool SatisfiesF(const std::vector<bool> &assign, uvector &n_sat_clauses, uvector &sat_clauses, uvector &indxs) const;
+    bool SatisfiesF(const vector<bool> &assign, vector<bool> &sat,
+                    const vector<unsigned int> &indxs) const;
 
     /**
      * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
@@ -254,7 +257,8 @@ public:
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
      * variable of the clause.
      */
-    [[nodiscard]] uvector getBreakCount(const std::vector<bool> &sat_clauses, const clause &s_clause, const std::vector<bool> &assign) const;
+    [[nodiscard]] uvector getBreakCount(const vector<bool> &sat_clauses, const clause &s_clause,
+                                        const vector<bool> &assign, unsigned int &min_index) const;
 
     /**
      * @brief WalkSAT algorithm for FactorGraph class.
@@ -266,7 +270,7 @@ public:
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
      * an assignment, it will return an empty vector.
      */
-    [[nodiscard]] std::vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
+    [[nodiscard]] vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
@@ -291,5 +295,5 @@ std::ostream &operator << (std::ostream &out, const clause &clause);
  * @param delim: Delimiter. By default is an space
  * @return A vector<string> with the splits of the string.
  */
-std::vector<std::string> SplitString(const std::string& str, char delim = ' ');
+vector<std::string> SplitString(const std::string& str, char delim = ' ');
 #endif //FACTOR_GRAPH_H

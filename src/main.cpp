@@ -41,11 +41,8 @@ int main() {
     // First, initialize the cnf_folder vector.
     initialize_cnf_folder();
     FactorGraph my_graph(cnf_folder[select_formula()]);
-    my_graph.PartialAssignment(0, true);
-    std::cout << my_graph <<  std::endl;
-    auto i = my_graph.getUnitVars();
-    for (auto it : i)
-        cout << "unit var " << it << endl;
-    my_graph.UnitPropagation();
-    cout << my_graph << endl;
+    auto a = my_graph.WalkSAT(10, 1e5, 0.5);
+    for (auto it : a)
+        cout << it << " ";
+    cout << endl;
 }

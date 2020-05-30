@@ -189,9 +189,17 @@ int SurveyPropagation::SID(vector<bool> &true_assignment) {
         }
         // Calling unit propagation with the assignment applied.
         AssociatedGraph.UnitPropagation();
-    } else {
+        // If there is a contradiction, we return CONTRADICTION
+        if (AssociatedGraph.Contradiction()) {
+            return CONTRADICTION;
+
+        } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
+            return SAT;
+        }
+    } else {                                         // If SP has not converged, return SP_UNCONVERGED
         return SP_UNCONVERGED;
     }
+
     return PROB_UNSAT;
 }
 

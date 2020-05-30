@@ -1,9 +1,7 @@
 #include <iostream>
 #include "SurveyPropagation.h"
-#include "FactorGraph.h"
 #include <filesystem>
 
-#define CNF_PATH "../../cnf"
 using namespace std;
 
 static vector<string> cnf_folder;
@@ -27,7 +25,7 @@ int select_formula() {
     int sel = 0;
     // Get the files of the folder and print the files inside.
     for (const auto& path : cnf_folder) {
-        cout << sel << ": " << path << endl;
+        cout << sel << ": " << SplitString(path, '/').back() << endl;
         sel++;
     }
     sel = -1;

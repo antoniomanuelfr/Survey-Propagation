@@ -7,6 +7,11 @@
 
 #define SP_UNCONVERGED -1
 #define SP_CONVERGED 1
+#define SAT 1
+#define PROB_UNSAT 0
+#define EMPTY -1
+#define CONTRADICTION -2
+
 #include <utility>
 
 #include "FactorGraph.h"

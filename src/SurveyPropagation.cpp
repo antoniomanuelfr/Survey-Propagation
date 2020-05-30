@@ -106,8 +106,8 @@ int SurveyPropagation::SP(bool &trivial) {
     return SP_UNCONVERGED;
 }
 
-void SurveyPropagation::CalculateBiases(std::vector<double> &positive_w, std::vector<double> &negative_w,
-                                        std::vector<double> &zero_w, int &max_index) {
+void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<double> &negative_w, vector<double> &zero_w,
+                                        int &max_index) {
     if (!positive_w.empty()) {
         positive_w.clear();
     }
@@ -166,12 +166,12 @@ void SurveyPropagation::CalculateBiases(std::vector<double> &positive_w, std::ve
     }
 }
 
-int SurveyPropagation::SID(std::vector<bool> &true_assignment) {
+int SurveyPropagation::SID(vector<bool> &true_assignment) {
     bool trivial_surveys;
     int max_index;
-    std::vector<double> positive_w, negative_w, zero_w;
-    std::vector<bool> walksat_assignment;
-    std::vector<int>assignment(this->AssociatedGraph.getNVariables(), 0);
+    vector<double> positive_w, negative_w, zero_w;
+    vector<bool> walksat_assignment;
+    vector<int>assignment(this->AssociatedGraph.getNVariables(), 0);
     // The surveys are randomized by default.
     if (SP(trivial_surveys) == SP_CONVERGED) {
         // Decimate process, check if the surveys aren't trivial.
@@ -188,6 +188,7 @@ int SurveyPropagation::SID(std::vector<bool> &true_assignment) {
             }
         }
         // Calling unit propagation with the assignment applied.
+        AssociatedGraph.UnitPropagation();
     } else {
         return SP_UNCONVERGED;
     }

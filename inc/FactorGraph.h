@@ -6,8 +6,9 @@
 #define FACTOR_GRAPH_H
 #define SAT 1
 #define PROB_UNSAT 0
-#define UNSAT -1
-#define EMPTY -2
+#define EMPTY -1
+#define CONTRADICTION -2
+
 #include <vector>
 #include <utility>
 #include <iostream>
@@ -35,6 +36,7 @@ typedef vector<vector<double>> wmatrix;
  * @return True if the two clauses are equal (element by element).
  */
 bool operator == (const clause &c1, const clause &c2);
+
 /**
  * @brief Class for handle the factor graph representation of a CNF formula.
  *  The variables in a DIMACS file are in the range [1,NumberVariables]
@@ -167,8 +169,7 @@ public:
     /**
      * @brief Check if a variable appears in a search_clause.
      * @param search_clause: Clause where to look for the variable.
-     * @param variable: Variable that will be looked in Clause. If we want to find the variable 5, we have to put
-     * 5. (see class description).
+     * @param variable: Variable that will be looked in Clause.
      * @param positive: Will be true if the variable was founded in positives nodes, false in other case.
      * @return Index of the variable in the search_clause. If not found the return value is -1.
      */
@@ -186,7 +187,6 @@ public:
      * @brief Function that performs Unit Propagation. If a variable is a unit variable, the assignment of that variable
      * is defined by the value of that variable (if the unit variable appears as positive, the assignment will be true
      * and if the variable appears as negative the assignment will be false).
-     * @return
      */
     void UnitPropagation();
 
@@ -196,8 +196,7 @@ public:
      * clause where the variable appears as negative.
      * @param variable: Index of the variable that is going to be checked.
      * @param assignation: True or false assignation to the variable.
-     * @return A FactorGraph with the partial assignment applied.
-    */
+     */
     void PartialAssignment(unsigned int variable, bool assignation);
 
     /**
@@ -228,7 +227,7 @@ public:
      * @param positives: Vector where the clauses in which the variable_index appear as positive will be stored.
      * @param negatives: Vector where the clauses in which the variable_index appear as negative will be stored.
      */
-    void ClausesInVariable(unsigned int variable_index, uvector &positive, uvector &negatives) const;
+    void ClausesInVariable(unsigned int variable_index, uvector &positives, uvector &negatives) const;
 
     /**
      * @brief Function that checks if an assignment satisfies or not a given clause.
@@ -236,24 +235,26 @@ public:
      * @param search_clause: Clause that will be checked if the assignment satisfies it.
      * @return true if the clause is satisfied and false if not.
      */
-    [[nodiscard]] bool SatisfiesC(const vector<bool> &assignment, const clause &search_clause) const;
+    [[nodiscard]] static bool SatisfiesC(const vector<bool> &assignment, const clause &search_clause) ;
 
     /**
      * @brief Function that checks if an assignment satisfies or not the formula.
      * @param assign: Boolean vector with the assignment (true if positive false if negative).
-     * @param n_sat_clauses: Vector that will store the not satisfied clauses.
-     * @param sat: Vector that will store the satisfied clauses.
+     * @param sat: Boolean vector where the ith position will be true if the clause is satisfied with the given
+     * assignment and false if it is not satisfied.
+     * @param indexes: Indexes of the clauses that will be checked.
      * @return true if the formula is satisfied and false if not.
      */
-    bool SatisfiesF(const vector<bool> &assign, vector<bool> &sat,
-                    const vector<unsigned int> &indxs) const;
+    bool SatisfiesF(const vector<bool> &assign, vector<bool> &sat, const vector<unsigned int> &indexes) const;
 
     /**
      * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
      * flipped and count the number of clauses that are still satisfied.
-     * @param sat_clauses: Clauses that are satisfied with the given assignment.
-     * @param s_clause: Clause.
+     * @param sat_clauses: Boolean vector where the ith position will be true if the ith clause is satisfied with the
+     * given assign. False if it is not satisfied.
+     * @param s_clause: Clause that will be used to calculate the break count.
      * @param assign: True assigment that will be used.
+     * @param min_index: Index of the variable with the lower break count.
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
      * variable of the clause.
      */

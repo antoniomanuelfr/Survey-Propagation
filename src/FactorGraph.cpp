@@ -309,20 +309,20 @@ void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uve
                      this->NegativeClauses[clause].cend());
 }
 
-void FactorGraph::ClausesInVariable(unsigned int variable_index, uvector &positive, uvector &negatives) const {
-    if (!positive.empty())
-        positive.clear();
+void FactorGraph::ClausesInVariable(unsigned int variable_index, uvector &positives, uvector &negatives) const {
+    if (!positives.empty())
+        positives.clear();
 
     if (!negatives.empty())
         negatives.clear();
 
-    positive.insert(positive.begin(), this->PositiveVariables[variable_index].cbegin(),
+    positives.insert(positives.begin(), this->PositiveVariables[variable_index].cbegin(),
                      this->PositiveVariables[variable_index].cend());
     negatives.insert(negatives.begin(), this->NegativeVariables[variable_index].cbegin(),
                      this->NegativeVariables[variable_index].cend());
 }
 
-bool FactorGraph::SatisfiesC(const vector<bool> &assignment, const clause &search_clause) const {
+bool FactorGraph::SatisfiesC(const vector<bool> &assignment, const clause &search_clause) {
     int index;
     for (int i : search_clause) {
         index = i > 0 ? i - 1 : abs(i) - 1;
@@ -333,11 +333,11 @@ bool FactorGraph::SatisfiesC(const vector<bool> &assignment, const clause &searc
     return false;
 }
 
-bool FactorGraph::SatisfiesF(const vector<bool> &assign, vector<bool> &sat, const uvector &indxs) const {
+bool FactorGraph::SatisfiesF(const vector<bool> &assign, vector<bool> &sat, const uvector &indexes) const {
 
     bool sat_clause;
     bool satisfied_formula = true;
-    for (auto search_clause : indxs) {
+    for (auto search_clause : indexes) {
         if (sat_clause = this->SatisfiesC(assign, this->Clause(search_clause)), !sat_clause) {
             satisfied_formula = false;
         }

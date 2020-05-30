@@ -51,8 +51,7 @@ private:
      * @param zero_w: Vector where the zero biases of each variable will be stored.
      * @param max_index: Index of the variable that with the largest difference between the positive and negative bias.
      */
-    void CalculateBiases(std::vector<double> &positive_w, std::vector<double> &negative_w,
-                         std::vector<double> &zero_w, int &max_index);
+    void CalculateBiases(vector<double> &positive_w, vector<double> &negative_w, vector<double> &zero_w, int &max_index);
 public:
 
     /**
@@ -83,8 +82,7 @@ public:
      * @param true_assignment: Boolean vector with the true assignment finded by the SID process.
      * @return SP_UNCONVERGED, PROB_UNSAT, SAT.
      */
-    int SID(std::vector<bool> &true_assignment);
+    int SID(vector<bool> &true_assignment);
 };
-
 
 #endif // SURVEY_PROPAGATION_H

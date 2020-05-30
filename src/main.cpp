@@ -8,7 +8,7 @@ static vector<string> cnf_folder;
 
 /**
  * @brief Function that initialize cnf_folder vector. This function will iterate over the path defined in
- * CNF_PATH and save the path of each file in the cnf_folder.
+ * CNF_PATH (this macro is defined using cmake) and save the path of each file in the cnf_folder.
  */
 void initialize_cnf_folder() {
     // Get the files of the folder and save the path in the folder vector.
@@ -35,6 +35,7 @@ int select_formula() {
     }
     return sel;
 }
+
 int main() {
     // First, initialize the cnf_folder vector.
     initialize_cnf_folder();

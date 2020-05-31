@@ -66,5 +66,9 @@ int main() {
     SurveyPropagation sp(my_graph);
     std::vector<bool> assignment;
 
-    cout << PrintSurveyPropagationResults(sp.SID(assignment, 5)) << endl;
+    cout << PrintSurveyPropagationResults(sp.SID(assignment, my_graph.getNVariables())) << endl;
+    for (auto it : assignment)
+        cout << it << " ";
+
+    cout << endl;
 }

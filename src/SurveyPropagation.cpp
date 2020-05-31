@@ -13,6 +13,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     bool connection_type;
     clause va;
     int index = -1;
+    unsigned int aux_index;
     uvector va_u, va_s;
     double survey = 1.0, s;
     double product_u = 1.0, product_s = 1.0, pi_u, pi_s, pi_0 = 1.0;
@@ -32,33 +33,41 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
                 va_u = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
             }
             else {
-                va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
                 va_s = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
+                va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
             }
+            product_s = product_u = pi_0 = 1.0;
             // Calculation of product u
             for (int b : va_u) {
-                s = this->AssociatedGraph.getEdgeW(b, j);
-                product_u *= (1.0 -  (s == 1.0 ? 0.0 : s));
+                // Get the index of variable j in the clause b
+                aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
+                aux_index = connection_type ? aux_index :
+                            aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
+                product_u *= (1.0 - this->AssociatedGraph.getEdgeW(b, aux_index));
             }
             // Calculation of product s
             for (int b : va_s) {
-                s = this->AssociatedGraph.getEdgeW(b, j);
-                product_s *= (1.0 - (s == 1.0 ? 0.0 : s));
+                // Get the index of variable in b
+                aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
+                aux_index = connection_type ? aux_index :
+                            aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
+                product_s *= (1.0 - this->AssociatedGraph.getEdgeW(b, aux_index));
             }
-            pi_u = (1 - product_u) * product_s;
-            pi_s = (1 - product_s) * product_u;
+            pi_u = (1.0 - product_u) * product_s;
+            pi_s = (1.0 - product_s) * product_u;
             //Calculation of pi_0
             for (auto b : this->AssociatedGraph.getClausesOfVariable(va[j])) {
                 if (b != search_clause) {
-                    s = this->AssociatedGraph.getEdgeW(b, j);
-                    pi_0 *= 1.0 - (s == 1.0 ? 0.0 : s);
+                    // Get the index of variable in b
+                    aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
+                    aux_index = connection_type ? aux_index :
+                                aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
+                    pi_0 *= 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
                 }
             }
-            survey *= pi_u / (pi_u + pi_s + pi_0);
-
-            pi_0 = 1.0;
-            product_s = 1.0;
-            product_u = 1.0;
+            if (pi_u + pi_s + pi_0 != 0.0) {
+                survey *= pi_u / (pi_u + pi_s + pi_0);
+            }
         } else {
             // Get the index for the setEdgeW function.
             index = j;
@@ -139,7 +148,6 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
     uvector positive_clauses, negative_clauses;
     clause actual_clause;
     unsigned int var_index_clause, variable_index;
-
     double positive_pi, negative_pi, zero_pi, pos_prod, neg_prod, survey, max = 0.0;
 
     // For each variable we have to calculate the three pis.
@@ -156,7 +164,6 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
             actual_clause = this->AssociatedGraph.Clause(it);
             var_index_clause = std::distance(actual_clause.begin(), std::find(actual_clause.begin(), actual_clause.end(), variable));
             survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
-            survey = survey == 1.0 ? 0.0 : survey;
             pos_prod *= (1.0 - survey);
             zero_pi *= (1.0 - survey);
         }
@@ -165,7 +172,6 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
             actual_clause = this->AssociatedGraph.Clause(it);
             int index = std::distance(actual_clause.begin(),std::find(actual_clause.begin(), actual_clause.end(), -(variable)));
             survey = this->AssociatedGraph.getEdgeW(it, index);
-            survey = survey == 1.0 ? 0.0 : survey;
             neg_prod *= (1.0 - survey);
             zero_pi *= (1.0 - survey);
         }
@@ -205,11 +211,9 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
                 walksat_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
                                                                    this->walksat_noise);
                 // If WalkSAT has found an assignment, return the assignment.
-                if (!walksat_assignment.empty()) {
-                    true_assignment = walksat_assignment;
-                    return SAT;
+                true_assignment = walksat_assignment;
+                return true_assignment.empty() ? PROB_UNSAT : SAT;
                 }
-            }
             // Calling unit propagation with the assignment applied.
             AssociatedGraph.UnitPropagation(true_assignment);
             // If there is a contradiction, we return CONTRADICTION

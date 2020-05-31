@@ -9,7 +9,6 @@
 #define SP_CONVERGED 1
 #define SAT 1
 #define PROB_UNSAT 0
-#define EMPTY -1
 #define CONTRADICTION -2
 
 #include <utility>
@@ -19,7 +18,9 @@
  * @brief Class for the implementation of the survey propagation algorithm.
  */
 class SurveyPropagation {
+
 private:
+
     /** Factor Graph of the formula that is going to be checked. */
     FactorGraph AssociatedGraph;
     /** Number of iterations of the algorithm. */
@@ -36,19 +37,21 @@ private:
     unsigned int walksat_flips;
     /** Noise for WalkSAT algorithm. */
     double walksat_noise;
+
     /**
      * @brief Function that implements the SP-Update function.
      * @param search_clause: Clause that is going going to be searched.
      * @param variable: Variable that is going to be searched.
      */
-    void Update(unsigned int search_clause, unsigned int variable);
+    void Update(unsigned int search_clause, int variable);
 
     /**
      * @brief Function that implements the SP function.
      * @param trivial: Will be true if the surveys are trivial (all surveys equal to zero).
      * @return It will return SP_UNCONVERGED if SP hasn't converged or SP_CONVERGED if SP has converged.
      */
-    int SP(bool &trivial);
+    [[nodiscard]] int SP(bool &trivial);
+
     /**
      * @brief Function that calculate the biases once all surveys have been updated.
      * @param positive_w: Vector where the positive biases of each variable will be stored.
@@ -57,6 +60,7 @@ private:
      * @param max_index: Index of the variable that with the largest difference between the positive and negative bias.
      */
     void CalculateBiases(vector<double> &positive_w, vector<double> &negative_w, vector<double> &zero_w, int &max_index);
+
 public:
 
     /**
@@ -70,8 +74,8 @@ public:
      * @param flips: Number of flips for WalkSAT algorithm.
      * @param noise: Noise parameter for WalkSAT algorithm.
      */
-    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 100, double precision = 0.1,
-            int seed = 0, double bound = 1e-6, unsigned int w_iters = 1000, unsigned flips = 100, double noise = 0.5) {
+    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 100, double precision = 10e-3,
+            int seed = 0, double bound = 1e-16, unsigned int w_iters = 1000, unsigned flips = 100, double noise = 0.5) {
         this->AssociatedGraph = AssociatedGraph;
         this->n_iters = n_iters;
         this->precision = precision;
@@ -85,9 +89,9 @@ public:
     /**
      * @brief Function that implements the SID function.
      * @param true_assignment: Boolean vector with the true assignment finded by the SID process.
+     * @param sid_iters: Number of iterations of the SID process.
      * @return SP_UNCONVERGED, PROB_UNSAT, SAT.
      */
-    int SID(vector<bool> &true_assignment);
+    [[nodiscard]] int SID(vector<bool> &true_assignment, unsigned int sid_iters);
 };
-
 #endif // SURVEY_PROPAGATION_H

@@ -4,7 +4,7 @@
 
 #include "SurveyPropagation.h"
 
-void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable) {
+void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     // Preconditions: Clause and variable must be in the range and there has to be a connection.
     if (search_clause > this->AssociatedGraph.getNClauses() || variable > this->AssociatedGraph.getNVariables()) {
         return;
@@ -17,20 +17,24 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
     double survey = 1.0;
     double product_u = 1.0, product_s = 1.0, pi_u, pi_s, pi_0 = 1.0;
     // Check if there is a connection between the search_clause and the variable.
-    if (this->AssociatedGraph.Connection(search_clause, variable, connection_type) == -1) {
+    if (this->AssociatedGraph.Connection(search_clause, abs(variable), connection_type) == -1) {
         return;
     }
     // Get V(search_clause)
     va = this->AssociatedGraph.Clause(search_clause);
     // For every variable j of va (except for the variable)
     for (int j = 0; j < va.size(); j++) {
-        if (abs(va[j]) != variable) {
+        if (va[j] != variable) {
             // Get the va_s (clauses where j appears with the same sign) and
             // v_u (clauses where j appears with the opposite sign) sets.
-            if (va[j] > 0)
-                this->AssociatedGraph.VariablesInClause(search_clause, va_s, va_u);
-            else
-                this->AssociatedGraph.VariablesInClause(search_clause, va_u, va_s);
+            if (va[j] > 0) {
+                va_s = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
+                va_u = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
+            }
+            else {
+                va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
+                va_s = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
+            }
             // Calculation of product u
             for (int b : va_u) {
                 product_u *= (1 - this->AssociatedGraph.getEdgeW(b, j));
@@ -42,7 +46,7 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
             pi_u = (1 - product_u) * product_s;
             pi_s = (1 - product_s) * product_u;
             //Calculation of pi_0
-            for (auto b : this->AssociatedGraph.ClausesOfVariable(va[j])) {
+            for (auto b : this->AssociatedGraph.getClausesOfVariable(va[j])) {
                 if (b != search_clause) {
                     pi_0 *= 1 - this->AssociatedGraph.getEdgeW(b, j);
                 }
@@ -57,6 +61,9 @@ void SurveyPropagation::Update(unsigned int search_clause, unsigned int variable
         }
     }
     if (survey < this->lower_bound) {
+        std::cout << "The survey between (" << search_clause << "->" << variable << ") is lower than " <<
+                  this->lower_bound << ". It will be set to 0." << std::endl;
+
         survey = 0;
     }
     // All the pis are calculated, so we calculate the survey
@@ -84,7 +91,7 @@ int SurveyPropagation::SP(bool &trivial) {
             std::sample(clause.begin(), clause.end(), std::back_inserter(sel_variables), clause.size(), generator);
             // Update every edge.
             for (int i = 0; i < clause.size(); i++) {
-                this->Update(index, sel_variables[i] < 0 ? abs(sel_variables[i]) : sel_variables[i]);
+                this->Update(index, sel_variables[i]);
             }
         }
         // Check the convergence condition.
@@ -99,10 +106,11 @@ int SurveyPropagation::SP(bool &trivial) {
         }
         // If the variable is true, means that all the the edge
         if (converged) {
-            std::cout << "Survey propagation has converged" << std::endl;
+            std::cout << "Survey propagation has converged." << std::endl;
             return SP_CONVERGED;
         }
     }
+    std::cout << "Survey propagation hasn't converged." << std::endl;
     return SP_UNCONVERGED;
 }
 
@@ -126,28 +134,31 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
 
     uvector positive_clauses, negative_clauses;
     clause actual_clause;
-    int var_index_clause;
+    unsigned int var_index_clause, variable_index;
+
     double positive_pi, negative_pi, zero_pi, pos_prod, neg_prod, survey, max = 0.0;
 
     // For each variable we have to calculate the three pis.
-    for (int variable_index = 0; variable_index < this->AssociatedGraph.getNVariables(); variable_index++) {
-        pos_prod = 0.0;
-        neg_prod = 0.0;
-        zero_pi = 0.0;
+    for (int variable = 1; variable <= this->AssociatedGraph.getNVariables(); variable++) {
+        variable_index = variable - 1;
+        pos_prod = 1.0;
+        neg_prod = 1.0;
+        zero_pi = 1.0;
         // Get the V_+ and V_- sets (clauses where the variable appears as positive and negative
-        this->AssociatedGraph.ClausesInVariable(variable_index, positive_clauses, negative_clauses);
-        // Positive PI of variable_index
+        positive_clauses = this->AssociatedGraph.getPositiveClausesOfVariable(variable);
+        negative_clauses = this->AssociatedGraph.getNegativeClausesOfVariable(variable);
+        // Positive PI of variable
         for (auto it : positive_clauses) {
             actual_clause = this->AssociatedGraph.Clause(it);
-            var_index_clause = std::distance(actual_clause.begin(), std::find(actual_clause.begin(), actual_clause.end(), variable_index++));
+            var_index_clause = std::distance(actual_clause.begin(), std::find(actual_clause.begin(), actual_clause.end(), variable));
             survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
             pos_prod *= (1 - survey);
-            zero_pi *= (1 - survey) ;
+            zero_pi *= (1 - survey);
         }
-        // Positive PI of variable_index
+        // Positive PI of variable
         for (auto it : negative_clauses) {
             actual_clause = this->AssociatedGraph.Clause(it);
-            int index = std::distance(actual_clause.begin(),std::find(actual_clause.begin(), actual_clause.end(), -(variable_index++)));
+            int index = std::distance(actual_clause.begin(),std::find(actual_clause.begin(), actual_clause.end(), -(variable)));
             survey = this->AssociatedGraph.getEdgeW(it, index);
             neg_prod *= (1 - survey);
             zero_pi *= (1 - survey);
@@ -161,45 +172,51 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
         double difference = std::abs(positive_w[variable_index] - negative_w[variable_index]);
         if (difference > max) {
             max = difference;
-            max_index = variable_index;
+            max_index = variable;
         }
     }
 }
 
-int SurveyPropagation::SID(vector<bool> &true_assignment) {
+int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters) {
+    if (!true_assignment.empty()) {
+        true_assignment.clear();
+    }
+    true_assignment.resize(this->AssociatedGraph.getNVariables(), false);
     bool trivial_surveys;
     int max_index;
     vector<double> positive_w, negative_w, zero_w;
     vector<bool> walksat_assignment;
-    vector<int>assignment(this->AssociatedGraph.getNVariables(), 0);
-    // The surveys are randomized by default.
-    if (SP(trivial_surveys) == SP_CONVERGED) {
-        // Decimate process, check if the surveys aren't trivial.
-        if (!trivial_surveys) {
-            this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
-            this->AssociatedGraph.PartialAssignment(max_index, positive_w[max_index] > negative_w[max_index]);
-        } else {
-            walksat_assignment = this->AssociatedGraph.WalkSAT(
-                    this->walksat_iters, this->walksat_flips, this->walksat_noise, this->seed);
-            // If WalkSAT has found an assignment, return the assignment.
-            if (!walksat_assignment.empty()) {
-                true_assignment = walksat_assignment;
+    for (int iter = 0; iter < sid_iters; iter++) {
+        // The surveys are randomized by default.
+        if (this->SP(trivial_surveys) == SP_CONVERGED) {
+            // Decimate process, check if the surveys aren't trivial.
+            if (!trivial_surveys) {
+                std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
+                this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
+                this->AssociatedGraph.PartialAssignment(max_index, positive_w[max_index] > negative_w[max_index]);
+            } else {
+                std::cout << "The surveys are trivial, starting local search." << std::endl;
+                walksat_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
+                                                                   this->walksat_noise);
+                // If WalkSAT has found an assignment, return the assignment.
+                if (!walksat_assignment.empty()) {
+                    true_assignment = walksat_assignment;
+                    return SAT;
+                }
+            }
+            // Calling unit propagation with the assignment applied.
+            AssociatedGraph.UnitPropagation(true_assignment);
+            // If there is a contradiction, we return CONTRADICTION
+            if (AssociatedGraph.Contradiction()) {
+                return CONTRADICTION;
+
+            } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
                 return SAT;
             }
+        } else {                                         // If SP has not converged, return SP_UNCONVERGED
+            return SP_UNCONVERGED;
         }
-        // Calling unit propagation with the assignment applied.
-        AssociatedGraph.UnitPropagation();
-        // If there is a contradiction, we return CONTRADICTION
-        if (AssociatedGraph.Contradiction()) {
-            return CONTRADICTION;
-
-        } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
-            return SAT;
-        }
-    } else {                                         // If SP has not converged, return SP_UNCONVERGED
-        return SP_UNCONVERGED;
     }
-
     return PROB_UNSAT;
 }
 

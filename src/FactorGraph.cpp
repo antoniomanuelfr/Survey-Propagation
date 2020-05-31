@@ -4,53 +4,25 @@
 
 #include "FactorGraph.h"
 
-bool operator == (const clause &c1, const clause &c2) {
-    if (c1.size() != c2.size()) {
-        return false;
-    }
-    for (int i = 0; i < c1.size(); i++) {
-        if (c1[i] != c2[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-FactorGraph::FactorGraph(const FactorGraph &fc) {
-    this->PositiveVariables.clear();
-    this->NegativeVariables.clear();
-    this->PositiveClauses.clear();
-    this->NegativeClauses.clear();
-    this->EdgeWeights.clear();
-
-    this->PositiveClauses = fc.PositiveClauses;
-    this->NegativeClauses = fc.NegativeClauses;
-    this->PositiveVariables = fc.PositiveVariables;
-    this->NegativeVariables = fc.NegativeVariables;
-    this->EdgeWeights = fc.EdgeWeights;
-
-    this->NumberClauses = fc.NumberClauses;
-    this->NumberVariables = fc.NumberVariables;
-}
-
 FactorGraph::FactorGraph(const std::string &path, int seed) {
     int n_clauses = 0, n_variables = 0;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
+    this->seed = seed;
     bool generate_rand = seed != -1;
-    RandomizeWeights(generate_rand, seed);
+    ChangeWeights(generate_rand);
 }
 
 uvector FactorGraph::getUnitVars() const {
     uvector unit_vars;
     for (int i = 0; i < this->NumberClauses; i++) {
-        int pos_size = this->PositiveClauses[i].size(), neg_size = this->NegativeClauses[i].size();
+        int pos_size = this->PositiveVariablesOfClause[i].size(), neg_size = this->NegativeVariablesOfClause[i].size();
         if (pos_size + neg_size == 1) {
             if (pos_size == 1) {
-                unit_vars.push_back(this->PositiveClauses[i][0]);
+                unit_vars.push_back(this->PositiveVariablesOfClause[i][0]);
             } else {
-                unit_vars.push_back(this->NegativeClauses[i][0]);
+                unit_vars.push_back(this->NegativeVariablesOfClause[i][0]);
             }
         }
     }
@@ -66,8 +38,10 @@ void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int variable, do
 double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) const {
     if (search_clause < this->NumberClauses && variable < this->NumberVariables)
         return this->EdgeWeights[search_clause][variable];
-    else
+    else {
+        std::cerr << "Wrong index!!" << std::endl;
         return 0.0;
+    }
 }
 
 void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_variables) {
@@ -75,11 +49,11 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
     std::string line;
     if (input_file.is_open()) {
         // Clear vectors.
-        this->PositiveClauses.clear();
-        this->NegativeClauses.clear();
+        this->PositiveVariablesOfClause.clear();
+        this->NegativeVariablesOfClause.clear();
         this->EdgeWeights.clear();
-        this->PositiveVariables.clear();
-        this->NegativeVariables.clear();
+        this->PositiveClausesOfVariable.clear();
+        this->NegativeClausesOfVariable.clear();
 
         // Skip the comments.
         while (getline(input_file, line) && line[0] == 'c');
@@ -120,8 +94,8 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                         i++;
                     }
                     //It's needed to push even when empty,
-                    this->PositiveClauses.push_back(positive_adjacency_vector);
-                    this->NegativeClauses.push_back(negative_adjacency_vector);
+                    this->PositiveVariablesOfClause.push_back(positive_adjacency_vector);
+                    this->NegativeVariablesOfClause.push_back(negative_adjacency_vector);
 
                     if (!positive_adjacency_vector.empty()) {
                         positive_adjacency_vector.clear();
@@ -132,8 +106,8 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                     counter++;
                 }
             }
-            this->PositiveVariables = positive_variables;
-            this->NegativeVariables = negative_variables;
+            this->PositiveClausesOfVariable = positive_variables;
+            this->NegativeClausesOfVariable = negative_variables;
         }else{
             std::cerr << "Enter a valid DIMACS file" << std::endl;
             exit(-1);
@@ -147,31 +121,31 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
 }
 
 int FactorGraph::Connection(unsigned int search_clause, unsigned int variable, bool &positive) const {
-    auto it = std::find(this->PositiveClauses[search_clause].cbegin(),
-                        this->PositiveClauses[search_clause].cend(), variable);
+    auto it = std::find(this->PositiveVariablesOfClause[search_clause].cbegin(),
+                        this->PositiveVariablesOfClause[search_clause].cend(), variable);
     auto pos = -1;
     // If the variable was founded, we have to find the index
-    if (this->PositiveClauses[search_clause].cend() != it) {
+    if (this->PositiveVariablesOfClause[search_clause].cend() != it) {
         // The complexity of this function is constant if the iterators are random access iterators
-        pos = std::distance(this->PositiveClauses[search_clause].cbegin(), it);
+        pos = std::distance(this->PositiveVariablesOfClause[search_clause].cbegin(), it);
         positive = true;
     } else {
-        it = std::find(this->NegativeClauses[search_clause].cbegin(),
-                       this->NegativeClauses[search_clause].cend(), variable);
-        if (this->NegativeClauses[search_clause].cend() != it) {
+        it = std::find(this->NegativeVariablesOfClause[search_clause].cbegin(),
+                       this->NegativeVariablesOfClause[search_clause].cend(), variable);
+        if (this->NegativeVariablesOfClause[search_clause].cend() != it) {
             // The complexity of this function is constant if the iterators are random access iterators
-            pos = std::distance(this->NegativeClauses[search_clause].cbegin(), it);
+            pos = std::distance(this->NegativeVariablesOfClause[search_clause].cbegin(), it);
             positive = false;
         }
     }
     return pos;
 }
 
-void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
+void FactorGraph::ChangeWeights(bool rand) {
     if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
 
-    std::default_random_engine generator(seed); // Random engine generator.
+    std::default_random_engine generator(this->seed); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
@@ -184,9 +158,10 @@ void FactorGraph::RandomizeWeights(bool rand, unsigned long seed) {
     }
 }
 
-void FactorGraph::UnitPropagation() {
+void FactorGraph::UnitPropagation(vector<bool> &assignment) {
     uvector unit_vars = this->getUnitVars();
     for (auto unit_var : unit_vars) {
+        assignment[unit_var] = unit_var > 0;
         this->PartialAssignment(unit_var - 1, unit_var > 0);
     }
 }
@@ -202,42 +177,42 @@ void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vect
             if (!satisfied[clause]) {
                 for (int variable : deleted[clause]) {
                     // Selection of the positive vectors.
-                    selected_clauses = variable > 0 ? &this->PositiveClauses[actual_clause] :
-                                       &this->NegativeClauses[actual_clause];
+                    selected_clauses = variable > 0 ? &this->PositiveVariablesOfClause[actual_clause] :
+                                       &this->NegativeVariablesOfClause[actual_clause];
                     // Find the variable to delete in the correct clause.
                     auto it = std::find(selected_clauses->begin(), selected_clauses->end(), abs(variable));
                     selected_clauses->erase(it);
                     unsigned int diff = std::distance(selected_clauses->begin(), it) +
-                            (variable > 0 ? 0 : this->PositiveClauses[actual_clause].size());
+                            (variable > 0 ? 0 : this->PositiveVariablesOfClause[actual_clause].size());
                     // We delete the weight of the edge.
                     this->EdgeWeights[actual_clause].erase(this->EdgeWeights[actual_clause].begin() + diff);
                 }
                 // If the clause if satisfied, remove it.
             } else {
-                this->PositiveClauses.erase(this->PositiveClauses.begin() + (actual_clause));
-                this->NegativeClauses.erase(this->NegativeClauses.begin() + (actual_clause));
+                this->PositiveVariablesOfClause.erase(this->PositiveVariablesOfClause.begin() + (actual_clause));
+                this->NegativeVariablesOfClause.erase(this->NegativeVariablesOfClause.begin() + (actual_clause));
                 this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
                 del++;
 
             }
         }
         // Make the Variables vectors with the new assignment.
-        for (auto &v : this->PositiveVariables) {
+        for (auto &v : this->PositiveClausesOfVariable) {
             v.clear();
         }
-        for (auto &v : this->NegativeVariables) {
+        for (auto &v : this->NegativeClausesOfVariable) {
             v.clear();
         }
 
-        for (int clause = 0; clause < this->PositiveClauses.size(); clause++) {
+        for (int clause = 0; clause < this->PositiveVariablesOfClause.size(); clause++) {
             cl = this->Clause(clause);
             for (auto var : cl) {
                 selected_variables =
-                        var > 0 ? &this->PositiveVariables[var - 1] : &this->NegativeVariables[abs(var) - 1];
+                        var > 0 ? &this->PositiveClausesOfVariable[var - 1] : &this->NegativeClausesOfVariable[abs(var) - 1];
                 selected_variables->push_back(clause);
             }
         }
-        this->NumberClauses = this->PositiveClauses.size();
+        this->NumberClauses = this->PositiveVariablesOfClause.size();
     }
 }
 
@@ -274,52 +249,26 @@ void FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
 clause FactorGraph::Clause(unsigned int search_clause) const {
     clause ret_clause;
     if (search_clause < this->NumberClauses) {
-        ret_clause.reserve(this->PositiveClauses[search_clause].size() + this->NegativeClauses[search_clause].size());
-        for (auto it : this->PositiveClauses[search_clause])
+        ret_clause.reserve(this->PositiveVariablesOfClause[search_clause].size() + this->NegativeVariablesOfClause[search_clause].size());
+        for (auto it : this->PositiveVariablesOfClause[search_clause])
             ret_clause.push_back(it);
-        for (auto it : this->NegativeClauses[search_clause])
+        for (auto it : this->NegativeVariablesOfClause[search_clause])
                 ret_clause.push_back(-it);
     }
     return ret_clause;
 }
 
-uvector FactorGraph::ClausesOfVariable(int variable) const {
+uvector FactorGraph::getClausesOfVariable(int variable) const {
     uvector ret_clause;
     unsigned int variable_c = variable > 0 ? variable - 1 : abs(variable) - 1;
-    ret_clause.reserve(this->PositiveVariables.size() + this->NegativeVariables.size());
+    ret_clause.reserve(this->PositiveClausesOfVariable.size() + this->NegativeClausesOfVariable.size());
     if (variable < this->NumberVariables) {
-        ret_clause = this->PositiveVariables[variable_c];
+        ret_clause = this->PositiveClausesOfVariable[variable_c];
 
-        for (auto it : this->NegativeVariables[variable_c])
+        for (auto it : this->NegativeClausesOfVariable[variable_c])
             ret_clause.push_back(it);
     }
     return ret_clause;
-}
-
-void FactorGraph::VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const {
-    if (!positives.empty())
-        positives.clear();
-
-    if (!negatives.empty())
-        negatives.clear();
-
-    positives.insert(positives.begin(), this->PositiveClauses[clause].cbegin(),
-                     this->PositiveClauses[clause].cend());
-    negatives.insert(negatives.begin(), this->NegativeClauses[clause].cbegin(),
-                     this->NegativeClauses[clause].cend());
-}
-
-void FactorGraph::ClausesInVariable(unsigned int variable_index, uvector &positives, uvector &negatives) const {
-    if (!positives.empty())
-        positives.clear();
-
-    if (!negatives.empty())
-        negatives.clear();
-
-    positives.insert(positives.begin(), this->PositiveVariables[variable_index].cbegin(),
-                     this->PositiveVariables[variable_index].cend());
-    negatives.insert(negatives.begin(), this->NegativeVariables[variable_index].cbegin(),
-                     this->NegativeVariables[variable_index].cend());
 }
 
 bool FactorGraph::SatisfiesC(const vector<bool> &assignment, const clause &search_clause) {
@@ -355,7 +304,7 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
     unsigned int min = this->NumberClauses;
     for (int i = 0; i < s_clause.size(); i++) {
         // Get the clauses where each variable appears.
-        for (auto clause_index : this->ClausesOfVariable(s_clause[i])) {
+        for (auto clause_index : this->getClausesOfVariable(s_clause[i])) {
             // If the clause is satisfied, we calculate the break count of that variable
             if (sat_clauses[clause_index]) {
                 c = this->Clause(clause_index);
@@ -374,14 +323,14 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
     return break_count;
 }
 
-vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed) const {
+vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise) const {
     unsigned int min_index, v;
     bool sat;
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
 
-    std::default_random_engine gen(seed); // Random engine generator.
+    std::default_random_engine gen(this->seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
@@ -432,7 +381,7 @@ vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips
             // Check if the new assignment satisfies the clauses where the selected variable appears.
             not_satisfied_clauses.clear();
             // We update the variables that are going to be searched
-            indexes = this->ClausesOfVariable(C[v]);
+            indexes = this->getClausesOfVariable(C[v]);
         }
     }
     return vector<bool>();
@@ -473,4 +422,16 @@ vector<std::string> SplitString(const std::string &str, char delim) {
     }
     cont.push_back(str.substr(previous, current - previous));
     return cont;
+}
+
+bool operator == (const clause &c1, const clause &c2) {
+    if (c1.size() != c2.size()) {
+        return false;
+    }
+    for (int i = 0; i < c1.size(); i++) {
+        if (c1[i] != c2[i]) {
+            return false;
+        }
+    }
+    return true;
 }

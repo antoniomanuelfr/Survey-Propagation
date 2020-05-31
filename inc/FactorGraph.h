@@ -37,25 +37,29 @@ bool operator == (const clause &c1, const clause &c2);
  * @brief Class for handle the factor graph representation of a CNF formula.
  *  The variables in a DIMACS file are in the range [1,NumberVariables]
  *  and the 0 variable means that the clause has finished. The representation that is used goes from
- *  [0,NumberVariables). So when we are saying that PositiveVariables[0] we are getting the clauses where the
+ *  [0,NumberVariables). So when we are saying that PositiveClausesOfVariable[0] we are getting the clauses where the
  *  variable 1 is positive.
  **/
 class FactorGraph {
+
 private:
+
     /** Vector that storage the positive variables of each clause. */
-    umatrix PositiveClauses;
+    umatrix PositiveVariablesOfClause;
     /** Vector that storage the negative variables of each clause. */
-    umatrix NegativeClauses;
+    umatrix NegativeVariablesOfClause;
     /** Vector that storage for each variable the clauses where that variable appear as positive. */
-    umatrix PositiveVariables;
+    umatrix PositiveClausesOfVariable;
     /** Vector that storage for each variable the clauses where that variable appear as negative. */
-    umatrix NegativeVariables;
+    umatrix NegativeClausesOfVariable;
     /** Vector that storage the edge pis (weight). */
     wmatrix EdgeWeights;
     /** Variable that storage the number of clauses. */
     int NumberClauses{0};
     /** Variable that storage the number of variables. */
     int NumberVariables{0};
+    /** Variable that storage the random seed that is going to be used for some algorithms. */
+    int seed{0};
 
     /**
      * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjunctive normal form).
@@ -74,26 +78,45 @@ private:
     void ApplyNewClauses(const vector<vector<int>> &deleted, const vector<bool> &satisfied);
 
 public:
+
     /**
      * @brief Empty constructor.
      */
     FactorGraph() = default;
+
     /**
      * @brief Copy constructor for FactorGraph class.
      * @param fc: Factor graph to copy.
      */
-    FactorGraph(const FactorGraph &fc);
+    [[maybe_unused]] FactorGraph(const FactorGraph &fc) {
+        this->PositiveClausesOfVariable.clear();
+        this->NegativeClausesOfVariable.clear();
+        this->PositiveVariablesOfClause.clear();
+        this->NegativeVariablesOfClause.clear();
+        this->EdgeWeights.clear();
+
+        this->PositiveVariablesOfClause = fc.PositiveVariablesOfClause;
+        this->NegativeVariablesOfClause = fc.NegativeVariablesOfClause;
+        this->PositiveClausesOfVariable = fc.PositiveClausesOfVariable;
+        this->NegativeClausesOfVariable = fc.NegativeClausesOfVariable;
+        this->EdgeWeights = fc.EdgeWeights;
+        this->seed = fc.seed;
+
+        this->NumberClauses = fc.NumberClauses;
+        this->NumberVariables = fc.NumberVariables;
+    }
 
     /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
-     * @param seed: Seed for the random number generator (used for the function RandomizeWeights).
+     * @param seed: Seed for the random number generator (used for the function ChangeWeights).
      */
-    explicit FactorGraph(const std::string &path, int seed = 0);
+    explicit FactorGraph(const std::string &path, int seed);
 
     /**
      * @brief Getter for NumberClauses.
-     * @return Integer with the value of NumberClauses.
+     * @return Integer with the value of NumberClauses. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
     [[nodiscard]] int getNClauses() const {
         return NumberClauses;
@@ -101,7 +124,8 @@ public:
 
     /**
      * @brief Getter for NumberVariables.
-     * @return Integer with the value of NumberVariables.
+     * @return Integer with the value of NumberVariables. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
     [[nodiscard]] int getNVariables() const {
         return NumberVariables;
@@ -109,7 +133,8 @@ public:
 
     /**
      * @brief Check if the formula is an empty clause.
-     * @return True if the formula is an empty clause or false if not
+     * @return True if the formula is an empty clause or false if not. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
     [[nodiscard]] bool EmptyClause() const {
         return (this->NumberClauses == 0) ;
@@ -117,40 +142,77 @@ public:
 
     /**
     * @brief Check if the formula is a contradiction.
-    * @return True if the formula is a contradiction or false if not
+    * @return True if the formula is a contradiction or false if not. If the output of this function is discarded,
+    * the compiler will raise a warning.
     */
     [[nodiscard]] bool Contradiction() const {
         return (this->NumberClauses == 1) && (this->Clause(0).empty());
     }
 
     /**
-     * @brief Get all the edges of a clause.
-     * @param search_clause: Clause that will be looked.
-     * @return Vector with all the edges of search_clause.
-     */
-    vector<double> getEdge(unsigned int search_clause) {
-        return this->EdgeWeights[search_clause];
-    }
-
-    /**
      * @brief Getter for a specific edge weight.
      * @param search_clause: Clause of the edge.
      * @param variable: Variable of the edge.
-     * @return The assigned weight of the edge between search_clause and variable.
+     * @return The assigned weight of the edge between search_clause and variable. If the output of this function is
+     * discarded, the compiler will raise a warning.
      */
     [[nodiscard]] double getEdgeW(unsigned int search_clause, unsigned int variable) const;
 
     /**
      * @brief Function that return the weights matrix.
-     * @return An wmatrix object.
+     * @return A const reference to EdgeWeights. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
-    [[nodiscard]] wmatrix getMatrix() const {
+    [[nodiscard]] const wmatrix & getMatrix() const {
         return this->EdgeWeights;
+    }
+
+     /**
+     * @brief Getter for PositiveVariablesOfClause vector.
+     * @param search_clause: Clause to look for.
+     * @return A const reference to PositiveVariablesOfClauses. If the output of this function is discarded,
+     * the compiler will raise a warning.
+     */
+     [[maybe_unused]] [[nodiscard]] const uvector & getPositiveVariablesOfClause(unsigned int search_clause) const {
+        return this->PositiveVariablesOfClause[search_clause];
+    }
+
+    /**
+     * @brief Getter for NegativeVariablesOfClause.
+     * @param search_clause: Clause to look for.
+     * @return A const reference to NegativeVariablesOfClause. If the output of this function is discarded,
+     * the compiler will raise a warning.
+     */
+    [[maybe_unused]] [[nodiscard]] const uvector & getNegativeVariablesOfClause(unsigned int search_clause) const {
+        return this->NegativeVariablesOfClause[search_clause];
+    }
+
+    /**
+     * @brief Getter for PositiveClausesOfVariable.
+     * @param variable: Variable to look for.
+     * @return A const reference to PositiveClausesOfVariable. If the output of this function is discarded,
+     * the compiler will raise a warning.
+     */
+    [[nodiscard]] const uvector & getPositiveClausesOfVariable(int variable) const {
+        unsigned int variable_index = variable > 0 ? variable - 1 : abs(variable) - 1;
+        return this->PositiveClausesOfVariable[variable_index];
+    }
+
+    /**
+     * @brief Getter for NegativeClausesOfVariable.
+     * @param variable: Variable to look for.
+     * @return A const reference to NegativeClausesOfVariable. If the output of this function is discarded,
+     * the compiler will raise a warning.
+     */
+    [[nodiscard]] const uvector & getNegativeClausesOfVariable(int variable) const {
+        unsigned int variable_index = variable > 0 ? variable - 1 : abs(variable) - 1;
+        return this->NegativeClausesOfVariable[variable_index];
     }
 
     /**
      * @brief Function that returns the unit vars.
-     * @return A vector with the unit variables of the formula.
+     * @return A vector with the unit variables of the formula. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
     [[nodiscard]] uvector getUnitVars() const;
 
@@ -167,9 +229,10 @@ public:
      * @param search_clause: Clause where to look for the variable.
      * @param variable: Variable that will be looked in Clause.
      * @param positive: Will be true if the variable was founded in positives nodes, false in other case.
-     * @return Index of the variable in the search_clause. If not found the return value is -1.
+     * @return Index of the variable in the search_clause. If not found the return value is -1. If the output of this
+     * function is discarded, the compiler will raise a warning.
      */
-    int Connection(unsigned int search_clause, unsigned int variable, bool &positive) const;
+    [[nodiscard]] int Connection(unsigned int search_clause, unsigned int variable, bool &positive) const;
 
     /**
      * @brief Change the weights vector. If the weights are generated randomly this will be generated following a
@@ -177,14 +240,16 @@ public:
      * @param rand: If true random weights will be generated. If it's not true all weights will be 1. Defaults to true.
      * @param seed: Random seed for the number generator. Defaults to 0.
      */
-    void RandomizeWeights(bool rand = true, unsigned long seed = 0);
+    void ChangeWeights(bool rand);
 
     /**
      * @brief Function that performs Unit Propagation. If a variable is a unit variable, the assignment of that variable
      * is defined by the value of that variable (if the unit variable appears as positive, the assignment will be true
      * and if the variable appears as negative the assignment will be false).
+     * @param assignment: Vector where the value of the unit variables will be written. This vector must have the same
+     * length than the number of clauses.
      */
-    void UnitPropagation();
+    void UnitPropagation(vector<bool> &assignment);
 
     /**
      * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
@@ -198,45 +263,33 @@ public:
     /**
      * @brief Return the complete search_clause.
      * @param search_clause: Clause to search.
-     * @return Vector that contains the search_clause.
+     * @return Vector with all the variable that appears in search_clause. If the variable is true it will appear
+     * as positive and it will appear as negative if the variable if false. If the output of this function
+     * is discarded, the compiler will raise a warning.
      */
     [[nodiscard]] clause Clause(unsigned int search_clause) const;
 
     /**
      * @brief Get the clauses where a variable appears.
      * @param variable: Variable to look for.
-     * @return A vector with the clauses where variable appears.
+     * @return A vector with the clauses where variable appears. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
-    [[nodiscard]] uvector ClausesOfVariable(int variable) const;
-
-    /**
-     * @brief Look for the positives and negatives variables in a clause.
-     * @param clause: Clause to look.
-     * @param positives: Vector where the positive variables that appear in the clause will be stored.
-     * @param negatives: Vector where the negative variables that appear in the clause will be stored.
-     */
-    void VariablesInClause(unsigned int clause, uvector &positives, uvector &negatives) const;
-
-    /**
-     * @brief Look for the positives and negatives clauses of a variable_index.
-     * @param variable_index: variable_index to look.
-     * @param positives: Vector where the clauses in which the variable_index appear as positive will be stored.
-     * @param negatives: Vector where the clauses in which the variable_index appear as negative will be stored.
-     */
-    void ClausesInVariable(unsigned int variable_index, uvector &positives, uvector &negatives) const;
+    [[nodiscard]] uvector getClausesOfVariable(int variable) const;
 
     /**
      * @brief Function that checks if an assignment satisfies or not a given clause.
      * @param assignment: Boolean vector with the assignment (true if positive false if negative).
      * @param search_clause: Clause that will be checked if the assignment satisfies it.
-     * @return true if the clause is satisfied and false if not.
+     * @return true if the clause is satisfied and false if not. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
     [[nodiscard]] static bool SatisfiesC(const vector<bool> &assignment, const clause &search_clause) ;
 
     /**
      * @brief Function that checks if an assignment satisfies or not the formula.
      * @param assign: Boolean vector with the assignment (true if positive false if negative).
-     * @param sat: Boolean vector where the ith position will be true if the clause is satisfied with the given
+     * @param sat: Boolean vector where the ith position will be true if the ith clause is satisfied with the given
      * assignment and false if it is not satisfied.
      * @param indexes: Indexes of the clauses that will be checked.
      * @return true if the formula is satisfied and false if not.
@@ -252,7 +305,7 @@ public:
      * @param assign: True assigment that will be used.
      * @param min_index: Index of the variable with the lower break count.
      * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
-     * variable of the clause.
+     * variable of the clause. If the output of this function is discarded, the compiler will raise a warning.
      */
     [[nodiscard]] uvector getBreakCount(const vector<bool> &sat_clauses, const clause &s_clause,
                                         const vector<bool> &assign, unsigned int &min_index) const;
@@ -265,9 +318,10 @@ public:
      * break count.
      * @param seed: Seed that will be used for the random number generators. Defaults to 0.
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
-     * an assignment, it will return an empty vector.
+     * an assignment, it will return an empty vector. If the output of this function is discarded,
+     * the compiler will raise a warning.
      */
-    [[nodiscard]] vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, int seed = 0) const;
+    [[nodiscard]] vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise) const;
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.

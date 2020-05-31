@@ -252,13 +252,13 @@ public:
     void UnitPropagation(vector<bool> &assignment);
 
     /**
-     * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
-     * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
-     * clause where the variable appears as negative.
-     * @param variable: Index of the variable that is going to be checked.
-     * @param assignation: True or false assignation to the variable.
+     * @brief Function that performs a partial assignment. If a variable_index is true, we have to remove the clauses where
+     * that variable_index appears as positive (because that clause will be satisfied) and remove that variable_index from the
+     * clause where the variable_index appears as negative.
+     * @param variable_index: Index of the variable_index that is going to be checked.
+     * @param assignation: True or false assignation to the variable_index.
      */
-    void PartialAssignment(unsigned int variable, bool assignation);
+    void PartialAssignment(unsigned int variable_index, bool assignation);
 
     /**
      * @brief Return the complete search_clause.

@@ -216,27 +216,27 @@ void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vect
     }
 }
 
-void FactorGraph::PartialAssignment(unsigned int variable, bool assignation) {
+void FactorGraph::PartialAssignment(unsigned int variable_index, bool assignation) {
     bool type;
     int index;
     vector<bool> satisfied_clauses(this->NumberClauses, false);
     // This matrix
     vector<vector<int>> deleted_variables_from_clauses;
     deleted_variables_from_clauses.resize(this->NumberClauses);
-        // If the variable i changes.
+        // If the variable_index i changes.
     for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
-        index = this->Connection(search_clause, variable + 1, type);
-        // If the variable i is in search_clause.
+        index = this->Connection(search_clause, variable_index + 1, type);
+        // If the variable_index i is in search_clause.
         if (index != -1) {
-            // If the variable appears as negative and we assign it to true.
+            // If the variable_index appears as negative and we assign it to true.
             if (!type && assignation) {
-                deleted_variables_from_clauses[search_clause].push_back(-(variable + 1));
-                // If the variable appears as positive and we assign it to negative.
+                deleted_variables_from_clauses[search_clause].push_back(-(variable_index + 1));
+                // If the variable_index appears as positive and we assign it to negative.
             } else if (type && !assignation) {
-                deleted_variables_from_clauses[search_clause].push_back(variable + 1);
+                deleted_variables_from_clauses[search_clause].push_back(variable_index + 1);
             }
-                // If the variable appears as positive and we assign it to positive or
-                // If the variable appears as negative and we assign it to negative,
+                // If the variable_index appears as positive and we assign it to positive or
+                // If the variable_index appears as negative and we assign it to negative,
                 // the clause will be satisfied and deleted.
             else {
                 satisfied_clauses[search_clause] = true;

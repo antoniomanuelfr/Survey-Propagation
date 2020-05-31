@@ -14,7 +14,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     clause va;
     int index = -1;
     uvector va_u, va_s;
-    double survey = 1.0;
+    double survey = 1.0, s;
     double product_u = 1.0, product_s = 1.0, pi_u, pi_s, pi_0 = 1.0;
     // Check if there is a connection between the search_clause and the variable.
     if (this->AssociatedGraph.Connection(search_clause, abs(variable), connection_type) == -1) {
@@ -37,21 +37,25 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             }
             // Calculation of product u
             for (int b : va_u) {
-                product_u *= (1 - this->AssociatedGraph.getEdgeW(b, j));
+                s = this->AssociatedGraph.getEdgeW(b, j);
+                product_u *= (1.0 -  (s == 1.0 ? 0.0 : s));
             }
             // Calculation of product s
             for (int b : va_s) {
-                product_s *= (1 - this->AssociatedGraph.getEdgeW(b, j));
+                s = this->AssociatedGraph.getEdgeW(b, j);
+                product_s *= (1.0 - (s == 1.0 ? 0.0 : s));
             }
             pi_u = (1 - product_u) * product_s;
             pi_s = (1 - product_s) * product_u;
             //Calculation of pi_0
             for (auto b : this->AssociatedGraph.getClausesOfVariable(va[j])) {
                 if (b != search_clause) {
-                    pi_0 *= 1 - this->AssociatedGraph.getEdgeW(b, j);
+                    s = this->AssociatedGraph.getEdgeW(b, j);
+                    pi_0 *= 1.0 - (s == 1.0 ? 0.0 : s);
                 }
             }
             survey *= pi_u / (pi_u + pi_s + pi_0);
+
             pi_0 = 1.0;
             product_s = 1.0;
             product_u = 1.0;
@@ -61,8 +65,8 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
         }
     }
     if (survey < this->lower_bound) {
-        std::cout << "The survey between (" << search_clause << "->" << variable << ") is lower than " <<
-                  this->lower_bound << ". It will be set to 0." << std::endl;
+        /*std::cout << "The survey between (" << search_clause << "->" << variable << ") is lower than " <<
+                  this->lower_bound << ". It will be set to 0." << std::endl;*/
 
         survey = 0;
     }
@@ -106,7 +110,7 @@ int SurveyPropagation::SP(bool &trivial) {
         }
         // If the variable is true, means that all the the edge
         if (converged) {
-            std::cout << "Survey propagation has converged." << std::endl;
+            std::cout << "Survey propagation has converged.";
             return SP_CONVERGED;
         }
     }
@@ -152,23 +156,25 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
             actual_clause = this->AssociatedGraph.Clause(it);
             var_index_clause = std::distance(actual_clause.begin(), std::find(actual_clause.begin(), actual_clause.end(), variable));
             survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
-            pos_prod *= (1 - survey);
-            zero_pi *= (1 - survey);
+            survey = survey == 1.0 ? 0.0 : survey;
+            pos_prod *= (1.0 - survey);
+            zero_pi *= (1.0 - survey);
         }
         // Positive PI of variable
         for (auto it : negative_clauses) {
             actual_clause = this->AssociatedGraph.Clause(it);
             int index = std::distance(actual_clause.begin(),std::find(actual_clause.begin(), actual_clause.end(), -(variable)));
             survey = this->AssociatedGraph.getEdgeW(it, index);
-            neg_prod *= (1 - survey);
-            zero_pi *= (1 - survey);
+            survey = survey == 1.0 ? 0.0 : survey;
+            neg_prod *= (1.0 - survey);
+            zero_pi *= (1.0 - survey);
         }
-        positive_pi = (1 - pos_prod) * neg_prod;
-        negative_pi = (1 - neg_prod) * pos_prod;
+        positive_pi = (1.0 - pos_prod) * neg_prod;
+        negative_pi = (1.0 - neg_prod) * pos_prod;
 
         positive_w[variable_index] = positive_pi / (positive_pi + negative_pi + zero_pi);
         negative_w[variable_index] = negative_pi / (positive_pi + negative_pi + zero_pi);
-        zero_w[variable_index] = 1 - positive_w[variable_index] - negative_w[variable_index];
+        zero_w[variable_index] = 1.0 - positive_w[variable_index] - negative_w[variable_index];
         double difference = std::abs(positive_w[variable_index] - negative_w[variable_index]);
         if (difference > max) {
             max = difference;

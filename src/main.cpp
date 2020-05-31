@@ -67,9 +67,4 @@ int main() {
     std::vector<bool> assignment;
 
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 5)) << endl;
-    for (auto it : assignment) {
-        cout << it << " ";
-    }
-
-    cout << endl;
 }

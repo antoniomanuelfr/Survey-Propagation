@@ -30,7 +30,7 @@ int selectFormula() {
     }
     sel = -1;
     while (sel < 0 && sel > cnf_folder.size()) {
-        cout << "Choose a number between 0 and " << cnf_folder.size() << "." << endl;
+        cout << "Choose a number between 0 and " << cnf_folder.size() - 1 << "." << endl;
         cin >> sel;
     }
     return sel;
@@ -66,7 +66,7 @@ int main() {
     SurveyPropagation sp(my_graph);
     std::vector<bool> assignment;
 
-    cout << PrintSurveyPropagationResults(sp.SID(assignment, my_graph.getNVariables())) << endl;
+    cout << PrintSurveyPropagationResults(sp.SID(assignment, 5)) << endl;
     for (auto it : assignment)
         cout << it << " ";
 

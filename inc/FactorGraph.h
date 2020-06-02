@@ -217,6 +217,15 @@ public:
     [[nodiscard]] uvector getUnitVars() const;
 
     /**
+     * @brief Get the index of variable in search_clause
+     * @param search_clause: Clause to look for.
+     * @param variable: Variable to look for.
+     * @return The index of the variable in search_clause. If an the variable doesn't appear in the clause, the
+     * execution will be aborted with the exit_status = 1;
+     */
+    [[nodiscard]] unsigned int getIndexOfVariable(unsigned int search_clause, int variable) const;
+
+    /**
      * @brief Change the weight of a specific edge.
      * @param search_clause: Clause of the edge.
      * @param variable: Variable of the edge.

@@ -29,6 +29,20 @@ uvector FactorGraph::getUnitVars() const {
     return unit_vars;
 }
 
+unsigned int FactorGraph::getIndexOfVariable(unsigned int search_clause, int variable) const {
+    bool connection_type;
+    unsigned int index = this->Connection(search_clause, abs(variable), connection_type);
+    /* Get the index of variable in search_clause. In the clauses (and weights), first appear the positive variables and
+     * then appear the negative, so in order to get the index: See if the connection is negative. If it is
+     * negative adding de number of positive variables in the clause we get the index. */
+    if (index == -1) {
+        exit(1);
+    }
+    index += connection_type ? 0 : this->getPositiveVariablesOfClause(search_clause).size();
+
+    return index;
+}
+
 void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int variable, double value) {
     if (search_clause < this->NumberClauses && variable < this->NumberVariables) {
         this->EdgeWeights[search_clause][variable] = value;
@@ -40,7 +54,7 @@ double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) 
         return this->EdgeWeights[search_clause][variable];
     else {
         std::cerr << "Wrong index!!" << std::endl;
-        return 0.0;
+        exit(1);
     }
 }
 

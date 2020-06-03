@@ -2,6 +2,7 @@
 // Created by antoniomanuelfr on 4/10/20.
 //
 
+#include <z3.h>
 #include "SurveyPropagation.h"
 
 void SurveyPropagation::Update(unsigned int search_clause, int variable) {
@@ -10,22 +11,20 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
         return;
     }
 
-    bool connection_type;
     clause va;
     int index = -1;
     unsigned int aux_index;
     uvector va_u, va_s;
-    double survey = 1.0, s;
-    double product_u = 1.0, product_s = 1.0, pi_u, pi_s, pi_0 = 1.0;
-    // Check if there is a connection between the search_clause and the variable.
-    if (this->AssociatedGraph.Connection(search_clause, abs(variable), connection_type) == -1) {
-        return;
-    }
+    double survey = 1.0, weight;
+    double product_u, product_s, pi_u, pi_s, pi_0;
+
     // Get V(search_clause)
     va = this->AssociatedGraph.Clause(search_clause);
     // For every variable j of va (except for the variable)
     for (int j = 0; j < va.size(); j++) {
         if (va[j] != variable) {
+            product_s = product_u = pi_0 = 1.0;
+
             // Get the va_s (clauses where j appears with the same sign) and
             // v_u (clauses where j appears with the opposite sign) sets.
             if (va[j] > 0) {
@@ -36,51 +35,41 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
                 va_s = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
                 va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
             }
-            product_s = product_u = pi_0 = 1.0;
+
             // Calculation of product u
             for (int b : va_u) {
-                // Get the index of variable j in the clause b
-                aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
-                aux_index = connection_type ? aux_index :
-                            aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
-                product_u *= (1.0 - this->AssociatedGraph.getEdgeW(b, aux_index));
-            }
-            // Calculation of product s
-            for (int b : va_s) {
-                // Get the index of variable in b
-                aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
-                aux_index = connection_type ? aux_index :
-                            aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
-                product_s *= (1.0 - this->AssociatedGraph.getEdgeW(b, aux_index));
-            }
-            pi_u = (1.0 - product_u) * product_s;
-            pi_s = (1.0 - product_s) * product_u;
-            //Calculation of pi_0
-            for (auto b : this->AssociatedGraph.getClausesOfVariable(va[j])) {
                 if (b != search_clause) {
-                    // Get the index of variable in b
-                    aux_index = this->AssociatedGraph.Connection(b, abs(va[j]), connection_type);
-                    aux_index = connection_type ? aux_index :
-                                aux_index + this->AssociatedGraph.getPositiveClausesOfVariable(va[j]).size();
-                    pi_0 *= 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                    product_u *= weight;
+                    pi_0 *= weight;
                 }
             }
-            if (pi_u + pi_s + pi_0 != 0.0) {
-                survey *= pi_u / (pi_u + pi_s + pi_0);
+
+            // Calculation of product s
+            for (int b : va_s) {
+                if (b != search_clause) {
+                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                    product_s *= weight;
+                    pi_0 *= weight;
+                }
             }
+
+            product_u = product_u < this->lower_bound ? 0.0 : product_u;
+            product_s = product_s < this->lower_bound ? 0.0 : product_s;
+            pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
+            pi_u = (1.0 - product_u) * product_s;
+            pi_s = (1.0 - product_s) * product_u;
+
+            survey *= pi_u / (pi_u + pi_s + pi_0);
         } else {
             // Get the index for the setEdgeW function.
             index = j;
         }
     }
-    if (survey < this->lower_bound) {
-        /*std::cout << "The survey between (" << search_clause << "->" << variable << ") is lower than " <<
-                  this->lower_bound << ". It will be set to 0." << std::endl;*/
-
-        survey = 0;
-    }
     // All the pis are calculated, so we calculate the survey
-    this->AssociatedGraph.setEdgeW(search_clause, index, survey);
+    this->AssociatedGraph.setEdgeW(search_clause, index, survey < this->lower_bound ? 0.0 : survey);
 }
 
 int SurveyPropagation::SP(bool &trivial) {
@@ -88,8 +77,8 @@ int SurveyPropagation::SP(bool &trivial) {
     wmatrix prev_warnings;
     std::default_random_engine generator(seed); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
-    uvector clauses_indexes(this->AssociatedGraph.getNClauses());
-    clause clause, sel_variables;
+    uvector clauses_indexes(this->AssociatedGraph.getNClauses()), var_indexes;
+    clause clause;
     std::iota(clauses_indexes.begin(), clauses_indexes.end(), 0); // Generate the indexes vector.
     for (int iters = 0; iters < this->n_iters; iters++) {
         converged = true;
@@ -98,13 +87,15 @@ int SurveyPropagation::SP(bool &trivial) {
         // Choose random clauses without repetition.
         std::shuffle(clauses_indexes.begin(), clauses_indexes.end(), generator);
         for (int index : clauses_indexes) {
-            sel_variables.clear();
+            var_indexes.clear();
             clause = this->AssociatedGraph.Clause(index);
             // Choose random variable from the clause without repetition.
-            std::sample(clause.begin(), clause.end(), std::back_inserter(sel_variables), clause.size(), generator);
+            var_indexes.resize(clause.size());
+            std::iota(var_indexes.begin(), var_indexes.end(), 0);
+            std::shuffle(var_indexes.begin(), var_indexes.end(), generator);
             // Update every edge.
-            for (int i = 0; i < clause.size(); i++) {
-                this->Update(index, sel_variables[i]);
+            for (int i : var_indexes) {
+                this->Update(index, clause[i]);
             }
         }
         // Check the convergence condition.
@@ -218,15 +209,19 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
             AssociatedGraph.UnitPropagation(true_assignment);
             // If there is a contradiction, we return CONTRADICTION
             if (AssociatedGraph.Contradiction()) {
+                true_assignment.clear();
                 return CONTRADICTION;
 
             } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
                 return SAT;
             }
-        } else {                                         // If SP has not converged, return SP_UNCONVERGED
+        } else {
+            // If SP has not converged, return SP_UNCONVERGED
+            true_assignment.clear();
             return SP_UNCONVERGED;
         }
     }
+    true_assignment.clear();
     return PROB_UNSAT;
 }
 

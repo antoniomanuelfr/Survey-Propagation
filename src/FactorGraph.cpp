@@ -54,7 +54,8 @@ double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) 
         return this->EdgeWeights[search_clause][variable];
     else {
         std::cerr << "Wrong index!!" << std::endl;
-        exit(1);
+        //exit(1);
+        return -1;
     }
 }
 
@@ -116,7 +117,7 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
                     }
                     if (!negative_adjacency_vector.empty()) {
                         negative_adjacency_vector.clear();
-                    }                                               
+                    }
                     counter++;
                 }
             }

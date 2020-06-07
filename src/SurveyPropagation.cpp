@@ -2,7 +2,6 @@
 // Created by antoniomanuelfr on 4/10/20.
 //
 
-#include <z3.h>
 #include "SurveyPropagation.h"
 
 void SurveyPropagation::Update(unsigned int search_clause, int variable) {
@@ -37,17 +36,15 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             }
 
             // Calculation of product u
-            for (int b : va_u) {
-                if (b != search_clause) {
-                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
-                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
-                    product_u *= weight;
-                    pi_0 *= weight;
-                }
+            for (auto b : va_u) {
+                aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                product_u *= weight;
+                pi_0 *= weight;
             }
 
             // Calculation of product s
-            for (int b : va_s) {
+            for (auto b : va_s) {
                 if (b != search_clause) {
                     aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
                     weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
@@ -61,8 +58,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
             pi_u = (1.0 - product_u) * product_s;
             pi_s = (1.0 - product_s) * product_u;
-
-            survey *= pi_u / (pi_u + pi_s + pi_0);
+            survey *= (pi_u / (pi_u + pi_s + pi_0));
         } else {
             // Get the index for the setEdgeW function.
             index = j;
@@ -137,7 +133,6 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
     max_index = 0;
 
     uvector positive_clauses, negative_clauses;
-    clause actual_clause;
     unsigned int var_index_clause, variable_index;
     double positive_pi, negative_pi, zero_pi, pos_prod, neg_prod, survey, max = 0.0;
 
@@ -152,17 +147,15 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
         negative_clauses = this->AssociatedGraph.getNegativeClausesOfVariable(variable);
         // Positive PI of variable
         for (auto it : positive_clauses) {
-            actual_clause = this->AssociatedGraph.Clause(it);
-            var_index_clause = std::distance(actual_clause.begin(), std::find(actual_clause.begin(), actual_clause.end(), variable));
+            var_index_clause = this->AssociatedGraph.getIndexOfVariable(it, variable);
             survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
             pos_prod *= (1.0 - survey);
             zero_pi *= (1.0 - survey);
         }
         // Positive PI of variable
         for (auto it : negative_clauses) {
-            actual_clause = this->AssociatedGraph.Clause(it);
-            int index = std::distance(actual_clause.begin(),std::find(actual_clause.begin(), actual_clause.end(), -(variable)));
-            survey = this->AssociatedGraph.getEdgeW(it, index);
+            var_index_clause = this->AssociatedGraph.getIndexOfVariable(it, -variable);
+            survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
             neg_prod *= (1.0 - survey);
             zero_pi *= (1.0 - survey);
         }
@@ -184,36 +177,42 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
     if (!true_assignment.empty()) {
         true_assignment.clear();
     }
+
     true_assignment.resize(this->AssociatedGraph.getNVariables(), false);
     bool trivial_surveys;
     int max_index;
+    vector<int> fixed_variables;
     vector<double> positive_w, negative_w, zero_w;
-    vector<bool> walksat_assignment;
     for (int iter = 0; iter < sid_iters; iter++) {
         // The surveys are randomized by default.
         if (this->SP(trivial_surveys) == SP_CONVERGED) {
             // Decimate process, check if the surveys aren't trivial.
-            if (!trivial_surveys) {
+            if (trivial_surveys) {
+                vector<int> walksat_assignment (this->AssociatedGraph.getNVariables(), 0);
+                for (int it : fixed_variables) {
+                    walksat_assignment[it] = true_assignment[it] ? 1 : -1;
+                }
+                std::cout << "The surveys are trivial, starting local search." << std::endl;
+                true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
+                                                                this->walksat_noise, walksat_assignment);
+                std::cout << true_assignment.size() << std::endl;
+                return true_assignment.empty() ? PROB_UNSAT : SAT;
+            }else {
                 std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
                 this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
-                this->AssociatedGraph.PartialAssignment(max_index, positive_w[max_index] > negative_w[max_index]);
-            } else {
-                std::cout << "The surveys are trivial, starting local search." << std::endl;
-                walksat_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
-                                                                   this->walksat_noise);
-                // If WalkSAT has found an assignment, return the assignment.
-                true_assignment = walksat_assignment;
-                return true_assignment.empty() ? PROB_UNSAT : SAT;
+                fixed_variables.push_back(max_index);
+                bool assign = positive_w[max_index] > negative_w[max_index];
+                true_assignment[max_index] = assign;
+                this->AssociatedGraph.PartialAssignment(max_index, assign);
+                // Calling unit propagation with the assignment applied.
+                AssociatedGraph.UnitPropagation(true_assignment);
+                // If there is a contradiction, we return CONTRADICTION
+                if (AssociatedGraph.Contradiction()) {
+                    true_assignment.clear();
+                    return CONTRADICTION;
+                } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
+                    return SAT;
                 }
-            // Calling unit propagation with the assignment applied.
-            AssociatedGraph.UnitPropagation(true_assignment);
-            // If there is a contradiction, we return CONTRADICTION
-            if (AssociatedGraph.Contradiction()) {
-                true_assignment.clear();
-                return CONTRADICTION;
-
-            } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
-                return SAT;
             }
         } else {
             // If SP has not converged, return SP_UNCONVERGED

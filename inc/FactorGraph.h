@@ -146,7 +146,12 @@ public:
     * the compiler will raise a warning.
     */
     [[nodiscard]] bool Contradiction() const {
-        return (this->NumberClauses == 1) && (this->Clause(0).empty());
+        for (int i = 0 ; i < this->NumberClauses; i++) {
+            if (this->Clause(i).empty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -330,7 +335,8 @@ public:
      * an assignment, it will return an empty vector. If the output of this function is discarded,
      * the compiler will raise a warning.
      */
-    [[nodiscard]] vector<bool> WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise) const;
+    [[nodiscard]] vector<bool>
+    WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const;
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.

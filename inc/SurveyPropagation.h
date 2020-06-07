@@ -74,7 +74,7 @@ public:
      * @param flips: Number of flips for WalkSAT algorithm.
      * @param noise: Noise parameter for WalkSAT algorithm.
      */
-    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 1, double precision = 10e-3,
+    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 10, double precision = 10e-3,
             int seed = 0, double bound = 1e-16, unsigned int w_iters = 1000, unsigned flips = 100, double noise = 0.5) {
         this->AssociatedGraph = AssociatedGraph;
         this->n_iters = n_iters;

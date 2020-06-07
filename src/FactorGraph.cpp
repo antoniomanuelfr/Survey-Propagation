@@ -338,65 +338,72 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
     return break_count;
 }
 
-vector<bool> FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise) const {
+vector<bool>
+FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const {
     unsigned int min_index, v;
     bool sat;
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
-
+    for (int i = 0; i < applied_assignment.size(); i++) {
+        if (applied_assignment[i] != 0) {
+            assignment[i] = applied_assignment[i] == 1;
+        }
+    }
     std::default_random_engine gen(this->seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
     std::iota(indexes.begin(), indexes.end(), 0);
     for (int i = 0; i < max_tries; i++) {
-        std::generate(assignment.begin(), assignment.end(),
-                [&bdist, &gen]() { return static_cast<bool>(bdist(gen)); } );
-
-        for (int flips = 0; flips < max_flips; flips++) {
-            // Get the clauses state of the clauses with the given assignment.
+        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen));});
+        if (!this->Contradiction()) {
             this->SatisfiesF(assignment, sat_clauses, indexes);
-            not_satisfied_clauses.clear();
-            sat = true;
-            // Check if the assignment satisfies the formula. Save the not satisfied clauses in an auxiliary vector.
-            for (int clause = 0; clause < sat_clauses.size(); clause++) {
-                if (!sat_clauses[clause]) {
-                    sat = false;
-                    not_satisfied_clauses.push_back(clause);
+            for (int flips = 0; flips < max_flips; flips++) {
+                // Get the clauses state of the clauses with the given assignment.
+                not_satisfied_clauses.clear();
+                sat = true;
+                // Check if the assignment satisfies the formula. Save the not satisfied clauses in an auxiliary vector.
+                for (int clause = 0; clause < sat_clauses.size(); clause++) {
+                    if (!sat_clauses[clause]) {
+                        sat = false;
+                        not_satisfied_clauses.push_back(clause);
+                    }
                 }
-            }
-            // If the formula is satisfied, return the assignment.
-            if (sat) {
-                return assignment;
-            }
+                // If the formula is satisfied, return the assignment.
+                if (sat) {
+                    return assignment;
+                }
 
-            std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
-            // We get a random not satisfied clause
-            clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
-            uvector count = this->getBreakCount(sat_clauses, C, assignment, min_index);
-            // Check if there is any variable of C with break count equal to 0.
-            if (count[min_index] == 0) {
-                v = min_index;
-
-            } else { // If there the variable with the lower break count isn't zero.
-                // We choose a random v of C.
-                if (double_dist(gen) > noise) {
-                    std::uniform_int_distribution<unsigned int> dis(0, C.size() - 1);
-                    v = dis(gen);
-                // We choose tha variable with lower break count
-                } else {
+                std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
+                // We get a random not satisfied clause
+                clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
+                uvector count = this->getBreakCount(sat_clauses, C, assignment, min_index);
+                // Check if there is any variable of C with break count equal to 0.
+                if (count[min_index] == 0) {
                     v = min_index;
+
+                } else { // If there the variable with the lower break count isn't zero.
+                    // We choose a random v of C.
+                    if (double_dist(gen) > noise) {
+                        std::uniform_int_distribution<unsigned int> dis(0, C.size() - 1);
+                        v = dis(gen);
+                        // We choose tha variable with lower break count
+                    } else {
+                        v = min_index;
+                    }
                 }
+                // Get the index of the variable that will be flipped
+                int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
+                // Flip the variable
+                if (applied_assignment[index] == -1)
+                    continue;
+                assignment[index] = !assignment[index];
+                // Check if the new assignment satisfies the clauses where the selected variable appears.
+                // We update the variables that are going to be searched
+                indexes = this->getClausesOfVariable(C[v]);
+                this->SatisfiesF(assignment, sat_clauses, indexes);
             }
-            // Get the index of the variable that will be flipped
-            int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
-            // Flip the variable
-            assignment[index] = !assignment[index];
-            // Check if the new assignment satisfies the clauses where the selected variable appears.
-            not_satisfied_clauses.clear();
-            // We update the variables that are going to be searched
-            indexes = this->getClausesOfVariable(C[v]);
         }
     }
     return vector<bool>();

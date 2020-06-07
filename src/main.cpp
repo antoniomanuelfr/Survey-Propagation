@@ -62,11 +62,11 @@ string PrintSurveyPropagationResults(int sol) {
 int main() {
     // First, initialize the cnf_folder vector.
     initializeCnfFolder();
-    FactorGraph my_graph(cnf_folder[selectFormula()], 0);
+    FactorGraph my_graph(cnf_folder[selectFormula()], 44);
     SurveyPropagation sp(my_graph);
     std::vector<bool> assignment;
 
-    cout << PrintSurveyPropagationResults(sp.SID(assignment, 5)) << endl;
+    cout << PrintSurveyPropagationResults(sp.SID(assignment, 1000)) << endl;
     for (auto it : assignment)
         cout << it << " ";
 

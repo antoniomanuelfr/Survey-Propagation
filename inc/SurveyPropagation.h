@@ -87,11 +87,15 @@ public:
     }
 
     /**
-     * @brief Function that implements the SID function.
+     * @brief Function that implements the SID (Survey Inspired Decimation) function.
      * @param true_assignment: Boolean vector with the true assignment finded by the SID process.
      * @param sid_iters: Number of iterations of the SID process.
      * @return SP_UNCONVERGED, PROB_UNSAT, SAT.
      */
     [[nodiscard]] int SID(vector<bool> &true_assignment, unsigned int sid_iters);
+
+    [[nodiscard]] int SIDF(vector<bool> &true_assignment, double f);
+
+
 };
 #endif // SURVEY_PROPAGATION_H

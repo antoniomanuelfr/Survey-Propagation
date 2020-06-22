@@ -10,9 +10,10 @@ static vector<string> cnf_folder;
  * @brief Function that initialize cnf_folder vector. This function will iterate over the path defined in
  * CNF_PATH (this macro is defined using cmake) and save the path of each file in the cnf_folder.
  */
-void initializeCnfFolder() {
+void initializeCnfFolder(const string& folder = "") {
+    cnf_folder.clear();
     // Get the files of the folder and save the path in the folder vector.
-    for (const auto &entry : filesystem::directory_iterator(CNF_PATH)) {
+    for (const auto &entry : filesystem::directory_iterator(CNF_PATH + folder)) {
         cnf_folder.push_back(entry.path().string());
     }
 }
@@ -59,16 +60,26 @@ string PrintSurveyPropagationResults(int sol) {
     return res;
 }
 
-int main() {
-    // First, initialize the cnf_folder vector.
-    initializeCnfFolder();
-    FactorGraph my_graph(cnf_folder[selectFormula()], 44);
-    SurveyPropagation sp(my_graph);
+void Experiment(int N) {
     std::vector<bool> assignment;
+    vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
+    vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
 
-    cout << PrintSurveyPropagationResults(sp.SID(assignment, 1000)) << endl;
-    for (auto it : assignment)
-        cout << it << " ";
+    for (auto f : fractions) {
+        for (auto a : alphas) {
+            std::stringstream p;
+            p << "/testCNF/" << std::setprecision(3) << a ;
+            initializeCnfFolder( p.str());
+            for(const auto &path : cnf_folder) {
+                cout << "Executing SP over " << path << "with alpha = " << a << " f = " << f << endl;
+                FactorGraph fg(path, 0);
+                SurveyPropagation SP (fg);
+                cout << PrintSurveyPropagationResults(SP.SIDF(assignment, f)) << endl;
+            }
+        }
+    }
 
-    cout << endl;
+}
+int main() {
+    Experiment(100);
 }

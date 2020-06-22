@@ -224,4 +224,55 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
     return PROB_UNSAT;
 }
 
+int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
+    if (!true_assignment.empty()) {
+        true_assignment.clear();
+    }
+    bool trivial_surveys;
+    int max_index;
+    vector<int> walksat_assignment(this->AssociatedGraph.getNVariables(), 0);
+    vector<double> positive_w, negative_w, zero_w;
+    vector<unsigned int> ordered_indexes, fixed_variables;
+    vector<bool> assignment_fixed_vars;
+    // The surveys are randomized by default.
+    if (this->SP(trivial_surveys) == SP_CONVERGED) {
+        // Decimate process, check if the surveys aren't trivial.
+        if (!trivial_surveys) {
+            std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
+            this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
+            // Get the indexes of the higher biases.
+            ordered_indexes.clear();
+            ordered_indexes.resize(positive_w.size());
+            std::iota(ordered_indexes.begin(), ordered_indexes.end(), 0);
+            std::sort(ordered_indexes.begin(), ordered_indexes.end(), [&](int w1, int w2) {
+                return std::abs(positive_w[w1] - negative_w[w1]) > std::abs(positive_w[w2] - negative_w[w2]);
+            });
+            fixed_variables.clear();
+
+            for (int i = 0; i < ceil(f * this->AssociatedGraph.getNVariables()); i++) {
+                bool assign = std::abs(positive_w[ordered_indexes[i]]) > std::abs(negative_w[ordered_indexes[i]]);
+                this->AssociatedGraph.PartialAssignment(ordered_indexes[i], assign);
+                true_assignment[ordered_indexes[i]] =  assign;
+                walksat_assignment[ordered_indexes[i]] = assign ? 1 : -1;
+                // Calling unit propagation with the assignment applied.
+                AssociatedGraph.UnitPropagation(true_assignment);
+                // If there is a contradiction, we return CONTRADICTION
+                if (AssociatedGraph.Contradiction()) {
+                    true_assignment.clear();
+                    return CONTRADICTION;
+                } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
+                    return SAT;
+                }
+            }
+        }
+    } else {
+        // If SP has not converged, return SP_UNCONVERGED
+        true_assignment.clear();
+        return SP_UNCONVERGED;
+    }
+    true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
+                                                    this->walksat_noise, walksat_assignment);
+    return true_assignment.empty() ? PROB_UNSAT : SAT;
+}
+
 

@@ -420,6 +420,24 @@ std::ostream &operator << (std::ostream &out, const FactorGraph &graph) {
     return out;
 }
 
+bool FactorGraph::CheckAssignment(const vector<bool> &assignment) {
+    if (assignment.size() != this->NumberVariables) {
+        std::cerr << "Assignment vector is invalid" << std::endl;
+        return false;
+    }
+
+    bool satisfied = false;
+
+    for (int clause = 0; clause < this->NumberClauses; clause++) {
+        for (int var = 0; var < this->NumberVariables; var++){
+            if (!this->SatisfiesC(assignment, this->Clause(clause))){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 std::ostream &operator << (std::ostream &out, const clause &clause) {
     for (auto i : clause) {
         out << i << " " ;

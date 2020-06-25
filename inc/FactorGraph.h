@@ -339,6 +339,14 @@ public:
     WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const;
 
     /**
+     * @brief Check if an assignment satisfies a clause.
+     * @param assignment: Boolean vector with the assignment where the ith position will be the assignment of the
+     * ith variable.
+     * @return True if the assignment satisfies the entire clause and false if it not.
+     */
+    [[nodiscard]] bool CheckAssignment(const vector<bool> &assignment);
+
+    /**
      * @brief Operator << overload. The output will have the DIMACS syntax.
      * @param out: Ostream object (can be a file, standard output).
      * @param graph: Factor graph object that will be printed out.

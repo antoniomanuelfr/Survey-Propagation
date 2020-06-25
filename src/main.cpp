@@ -62,24 +62,42 @@ string PrintSurveyPropagationResults(int sol) {
 
 void Experiment(int N) {
     std::vector<bool> assignment;
+    std::ofstream out_file("results.csv");
+
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
 
+    int solved_clauses = 0;
+    out_file << "alpha,";
+    for (auto i : alphas) {
+        out_file << i << ",";
+    }
+    out_file << endl;
+
     for (auto f : fractions) {
+        out_file << f << ",";
         for (auto a : alphas) {
+            solved_clauses = 0;
             std::stringstream p;
             p << "/testCNF/" << std::setprecision(3) << a ;
-            initializeCnfFolder( p.str());
+            initializeCnfFolder(p.str());
             for(const auto &path : cnf_folder) {
-                cout << "Executing SP over " << path << "with alpha = " << a << " f = " << f << endl;
-                FactorGraph fg(path, 0);
+            //    cout << "Executing SP over " << path << " with alpha = " << a << " f = " << f << endl;
+                FactorGraph orig(path, 0), fg(orig);
                 SurveyPropagation SP (fg);
-                cout << PrintSurveyPropagationResults(SP.SIDF(assignment, f)) << endl;
+                if (SP.SIDF(assignment, f) == SAT) {
+                    if (orig.CheckAssignment(assignment)) {
+                        solved_clauses++;
+                    }
+                }
             }
+            cout << "Total resueltas con f = " << f << " y alfa = " << a << " es: " << (solved_clauses / N);
+            out_file << (solved_clauses / N) << ",";
         }
+        out_file << endl;
     }
-
 }
+
 int main() {
     Experiment(100);
 }

@@ -37,12 +37,13 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
 
             // Calculation of product u
             for (auto b : va_u) {
-                aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
-                weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
-                product_u *= weight;
-                pi_0 *= weight;
+                if (b != search_clause) {
+                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                    product_u *= weight;
+                    pi_0 *= weight;
+                }
             }
-
             // Calculation of product s
             for (auto b : va_s) {
                 if (b != search_clause) {
@@ -58,6 +59,9 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
             pi_u = (1.0 - product_u) * product_s;
             pi_s = (1.0 - product_s) * product_u;
+            if ((pi_u + pi_s + pi_0) == 0) {
+                exit(1);
+            }
             survey *= (pi_u / (pi_u + pi_s + pi_0));
         } else {
             // Get the index for the setEdgeW function.
@@ -127,6 +131,7 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
     if (!zero_w.empty()) {
         zero_w.clear();
     }
+
     positive_w.resize(this->AssociatedGraph.getNVariables());
     negative_w.resize(this->AssociatedGraph.getNVariables());
     zero_w.resize(this->AssociatedGraph.getNVariables());

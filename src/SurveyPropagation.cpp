@@ -22,15 +22,14 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     // For every variable j of va (except for the variable)
     for (int j = 0; j < va.size(); j++) {
         if (va[j] != variable) {
-            product_s = product_u = pi_0 = 1.0;
+            product_s = product_u = pi_0 = survey = 1.0;
 
             // Get the va_s (clauses where j appears with the same sign) and
             // v_u (clauses where j appears with the opposite sign) sets.
             if (va[j] > 0) {
                 va_s = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
                 va_u = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
-            }
-            else {
+            } else {
                 va_s = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
                 va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
             }

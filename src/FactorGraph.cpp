@@ -238,7 +238,7 @@ void FactorGraph::PartialAssignment(unsigned int variable_index, bool assignatio
     // This matrix
     vector<vector<int>> deleted_variables_from_clauses;
     deleted_variables_from_clauses.resize(this->NumberClauses);
-        // If the variable_index i changes.
+    // If the variable_index i changes.
     for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
         index = this->Connection(search_clause, variable_index + 1, type);
         // If the variable_index i is in search_clause.
@@ -275,12 +275,12 @@ clause FactorGraph::Clause(unsigned int search_clause) const {
 
 uvector FactorGraph::getClausesOfVariable(int variable) const {
     uvector ret_clause;
-    unsigned int variable_c = variable > 0 ? variable - 1 : abs(variable) - 1;
+    unsigned int variable_index = variable > 0 ? variable - 1 : abs(variable) - 1;
     ret_clause.reserve(this->PositiveClausesOfVariable.size() + this->NegativeClausesOfVariable.size());
     if (variable < this->NumberVariables) {
-        ret_clause = this->PositiveClausesOfVariable[variable_c];
+        ret_clause = this->PositiveClausesOfVariable[variable_index];
 
-        for (auto it : this->NegativeClausesOfVariable[variable_c])
+        for (auto it : this->NegativeClausesOfVariable[variable_index])
             ret_clause.push_back(it);
     }
     return ret_clause;
@@ -425,8 +425,6 @@ bool FactorGraph::CheckAssignment(const vector<bool> &assignment) {
         std::cerr << "Assignment vector is invalid" << std::endl;
         return false;
     }
-
-    bool satisfied = false;
 
     for (int clause = 0; clause < this->NumberClauses; clause++) {
         for (int var = 0; var < this->NumberVariables; var++){

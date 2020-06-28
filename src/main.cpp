@@ -113,13 +113,14 @@ void Experiment(int N) {
         out_file << endl;
     }
 }
+
 void TestCNF() {
     initializeCnfFolder();
     FactorGraph my_graph(cnf_folder[selectFormula()], 0);
     SurveyPropagation sp(my_graph);
     std::vector<bool> assignment;
 
-    cout << PrintSurveyPropagationResults(sp.SID(assignment, 1000)) << endl;
+    cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;
     if (assignment.size() != 0) {
         for (auto it : assignment)
             cout << it << " ";
@@ -128,4 +129,6 @@ void TestCNF() {
     }
 }
 int main() {
-Experiment(1000);}
+//Experiment(10000);}
+    TestCNF();
+}

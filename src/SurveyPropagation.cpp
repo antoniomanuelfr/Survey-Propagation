@@ -22,7 +22,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     // For every variable j of va (except for the variable)
     for (int j = 0; j < va.size(); j++) {
         if (va[j] != variable) {
-            product_s = product_u = pi_0 = survey = 1.0;
+            product_s = product_u = pi_0 = 1.0;
 
             // Get the va_s (clauses where j appears with the same sign) and
             // v_u (clauses where j appears with the opposite sign) sets.
@@ -52,16 +52,18 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
                     pi_0 *= weight;
                 }
             }
-
             product_u = product_u < this->lower_bound ? 0.0 : product_u;
             product_s = product_s < this->lower_bound ? 0.0 : product_s;
             pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
             pi_u = (1.0 - product_u) * product_s;
             pi_s = (1.0 - product_s) * product_u;
+
+            // Check the division by zero.
             if ((pi_u + pi_s + pi_0) == 0) {
-                exit(1);
+                survey = 0;
+            } else {
+                survey *= (pi_u / (pi_u + pi_s + pi_0));
             }
-            survey *= (pi_u / (pi_u + pi_s + pi_0));
         } else {
             // Get the index for the setEdgeW function.
             index = j;
@@ -109,11 +111,9 @@ int SurveyPropagation::SP(bool &trivial) {
         }
         // If the variable is true, means that all the the edge
         if (converged) {
-            std::cout << "Survey propagation has converged.";
             return SP_CONVERGED;
         }
     }
-    std::cout << "Survey propagation hasn't converged." << std::endl;
     return SP_UNCONVERGED;
 }
 
@@ -156,7 +156,7 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
             pos_prod *= (1.0 - survey);
             zero_pi *= (1.0 - survey);
         }
-        // Positive PI of variable
+        // Negative PI of variable
         for (auto it : negative_clauses) {
             var_index_clause = this->AssociatedGraph.getIndexOfVariable(it, -variable);
             survey = this->AssociatedGraph.getEdgeW(it, var_index_clause);
@@ -199,10 +199,8 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
                 std::cout << "The surveys are trivial, starting local search." << std::endl;
                 true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
                                                                 this->walksat_noise, walksat_assignment);
-                std::cout << true_assignment.size() << std::endl;
                 return true_assignment.empty() ? PROB_UNSAT : SAT;
             }else {
-                std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
                 this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
                 fixed_variables.push_back(max_index);
                 bool assign = positive_w[max_index] > negative_w[max_index];
@@ -268,8 +266,17 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
                     return SAT;
                 }
             }
+        } else {
+            walksat_assignment.clear();
+            for (int it : fixed_variables) {
+                walksat_assignment[it] = true_assignment[it] ? 1 : -1;
+            }
+            true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
+                                                            this->walksat_noise, walksat_assignment);
+            return true_assignment.empty() ? PROB_UNSAT : SAT;
         }
     } else {
+        std::cout << "SP did not converged." << std::endl;
         // If SP has not converged, return SP_UNCONVERGED
         true_assignment.clear();
         return SP_UNCONVERGED;

@@ -131,7 +131,6 @@ void FactorGraph::ReadDIMACS(const std::string &path, int &n_clauses, int &n_var
         std::cerr << "File not found" << std::endl;
         exit(-1);
     }
-    std::cout << "File: " << path << " read correctly." << std::endl;
     input_file.close();
 }
 
@@ -302,7 +301,8 @@ bool FactorGraph::SatisfiesF(const vector<bool> &assign, vector<bool> &sat, cons
     bool sat_clause;
     bool satisfied_formula = true;
     for (auto search_clause : indexes) {
-        if (sat_clause = this->SatisfiesC(assign, this->Clause(search_clause)), !sat_clause) {
+        sat_clause = this->SatisfiesC(assign, this->Clause(search_clause));
+        if (!sat_clause) {
             satisfied_formula = false;
         }
         sat[search_clause] = sat_clause;
@@ -340,23 +340,28 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
 
 vector<bool>
 FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const {
+
     unsigned int min_index, v;
     bool sat;
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
+    // Check if there is a variable that is not going to be changed.
     for (int i = 0; i < applied_assignment.size(); i++) {
         if (applied_assignment[i] != 0) {
             assignment[i] = applied_assignment[i] == 1;
         }
     }
+
     std::default_random_engine gen(this->seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
-    std::iota(indexes.begin(), indexes.end(), 0);
     for (int i = 0; i < max_tries; i++) {
         std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen));});
+        indexes.clear();
+        indexes.resize(this->NumberClauses);
+        std::iota(indexes.begin(), indexes.end(), 0);
         if (!this->Contradiction()) {
             this->SatisfiesF(assignment, sat_clauses, indexes);
             for (int flips = 0; flips < max_flips; flips++) {
@@ -396,7 +401,7 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 // Get the index of the variable that will be flipped
                 int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
                 // Flip the variable
-                if (applied_assignment[index] == -1)
+                if (applied_assignment[index] != 0)
                     continue;
                 assignment[index] = !assignment[index];
                 // Check if the new assignment satisfies the clauses where the selected variable appears.
@@ -420,17 +425,15 @@ std::ostream &operator << (std::ostream &out, const FactorGraph &graph) {
     return out;
 }
 
-bool FactorGraph::CheckAssignment(const vector<bool> &assignment) {
+bool FactorGraph::CheckAssignment(const vector<bool> &assignment) const {
     if (assignment.size() != this->NumberVariables) {
         std::cerr << "Assignment vector is invalid" << std::endl;
         return false;
     }
 
     for (int clause = 0; clause < this->NumberClauses; clause++) {
-        for (int var = 0; var < this->NumberVariables; var++){
-            if (!this->SatisfiesC(assignment, this->Clause(clause))){
-                return false;
-            }
+        if (!this->SatisfiesC(assignment, this->Clause(clause))){
+            return false;
         }
     }
     return true;

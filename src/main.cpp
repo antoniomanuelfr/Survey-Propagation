@@ -67,7 +67,7 @@ void Experiment(int N) {
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
 
-    int solved_clauses = 0;
+    int solved_formulas, unconverged, false_positives, unsat;
     out_file << "alpha,";
     for (auto i : alphas) {
         out_file << i << ",";
@@ -77,27 +77,55 @@ void Experiment(int N) {
     for (auto f : fractions) {
         out_file << f << ",";
         for (auto a : alphas) {
-            solved_clauses = 0;
+            solved_formulas = unconverged = unsat = false_positives =0;
             std::stringstream p;
-            p << "/testCNF/" << std::setprecision(3) << a ;
+            p << "/testCNF/" << N << "/" << std::setprecision(3) << a ;
+            cout << p.str() << endl;
             initializeCnfFolder(p.str());
             for(const auto &path : cnf_folder) {
-            //    cout << "Executing SP over " << path << " with alpha = " << a << " f = " << f << endl;
                 FactorGraph orig(path, 0), fg(orig);
                 SurveyPropagation SP (fg);
-                if (SP.SIDF(assignment, f) == SAT) {
-                    if (orig.CheckAssignment(assignment)) {
-                        solved_clauses++;
-                    }
+                int res = SP.SIDF(assignment, f);
+                switch (res) {
+                    case SAT:
+                        if (orig.CheckAssignment(assignment)) {
+                            solved_formulas++;
+                        } else {
+                            false_positives++;
+                        }
+                    break;
+                    case SP_UNCONVERGED:
+                        unconverged++;
+                        break;
+                    case PROB_UNSAT:
+                        unsat++;
+                        break;
+                    default:
+                        break;
                 }
             }
-            cout << "Total resueltas con f = " << f << " y alfa = " << a << " es: " << (solved_clauses / N);
-            out_file << (solved_clauses / N) << ",";
+            cout << "Results using f = " << f << " and alpha = " << a << ": " << endl;
+            cout << "SAT = " << solved_formulas << ", SP UNCONVERGED = " << unconverged << ", UNSAT = " << unsat
+                 << ", false positives = " << false_positives << endl;
+
+            out_file << (solved_formulas / N) << ",";
         }
         out_file << endl;
     }
 }
+void TestCNF() {
+    initializeCnfFolder();
+    FactorGraph my_graph(cnf_folder[selectFormula()], 0);
+    SurveyPropagation sp(my_graph);
+    std::vector<bool> assignment;
 
-int main() {
-    Experiment(100);
+    cout << PrintSurveyPropagationResults(sp.SID(assignment, 1000)) << endl;
+    if (assignment.size() != 0) {
+        for (auto it : assignment)
+            cout << it << " ";
+        cout << endl;
+        cout << my_graph.CheckAssignment(assignment);
+    }
 }
+int main() {
+Experiment(1000);}

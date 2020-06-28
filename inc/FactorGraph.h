@@ -330,7 +330,8 @@ public:
      * @param max_flips: Maximum number of flips that the algorithm will do.
      * @param noise: Noise parameter (this will choose if taking a random variable of c or the variable with the lower
      * break count.
-     * @param seed: Seed that will be used for the random number generators. Defaults to 0.
+     * @param applied_assignment: Vector that will be used to pre-assign variables. If the ith position is 1 the ith
+     * variable will be true, -1 will be false and if 0, walksat will be able to change it's assignment.
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
      * an assignment, it will return an empty vector. If the output of this function is discarded,
      * the compiler will raise a warning.
@@ -344,7 +345,7 @@ public:
      * ith variable.
      * @return True if the assignment satisfies the entire clause and false if it not.
      */
-    [[nodiscard]] bool CheckAssignment(const vector<bool> &assignment);
+    [[nodiscard]] bool CheckAssignment(const vector<bool> &assignment) const;
 
     /**
      * @brief Operator << overload. The output will have the DIMACS syntax.

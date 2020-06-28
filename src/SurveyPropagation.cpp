@@ -60,7 +60,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
 
             // Check the division by zero.
             if ((pi_u + pi_s + pi_0) == 0) {
-                survey = 0;
+                exit(1);
             } else {
                 survey *= (pi_u / (pi_u + pi_s + pi_0));
             }
@@ -190,6 +190,7 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
     for (int iter = 0; iter < sid_iters; iter++) {
         // The surveys are randomized by default.
         if (this->SP(trivial_surveys) == SP_CONVERGED) {
+            std::cout << "Survey propagation has converged" << std::endl;
             // Decimate process, check if the surveys aren't trivial.
             if (trivial_surveys) {
                 vector<int> walksat_assignment (this->AssociatedGraph.getNVariables(), 0);
@@ -199,8 +200,10 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
                 std::cout << "The surveys are trivial, starting local search." << std::endl;
                 true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
                                                                 this->walksat_noise, walksat_assignment);
+                std::cout << "Ending of local search." << std::endl;
                 return true_assignment.empty() ? PROB_UNSAT : SAT;
             }else {
+                std::cout << "The survey are not trivial." << std::endl;
                 this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
                 fixed_variables.push_back(max_index);
                 bool assign = positive_w[max_index] > negative_w[max_index];
@@ -238,6 +241,7 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
     vector<bool> assignment_fixed_vars;
     // The surveys are randomized by default.
     if (this->SP(trivial_surveys) == SP_CONVERGED) {
+        std::cout << "SP has converged." << std::endl;
         // Decimate process, check if the surveys aren't trivial.
         if (!trivial_surveys) {
             std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
@@ -267,6 +271,7 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
                 }
             }
         } else {
+            std::cout << "The survey are trivial, starting local search" << std::endl;
             walksat_assignment.clear();
             for (int it : fixed_variables) {
                 walksat_assignment[it] = true_assignment[it] ? 1 : -1;

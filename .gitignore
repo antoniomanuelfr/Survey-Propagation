@@ -34,3 +34,7 @@ cmake-build-*
 .vscode/
 
 build/
+
+Scripts/cnf_save
+
+cnf/testCNF/*

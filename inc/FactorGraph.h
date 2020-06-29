@@ -219,7 +219,7 @@ public:
      * @return A vector with the unit variables of the formula. If the output of this function is discarded,
      * the compiler will raise a warning.
      */
-    [[nodiscard]] uvector getUnitVars() const;
+    void getUnitVars(std::unordered_map<unsigned int, bool> &unit_vars) const;
 
     /**
      * @brief Get the index of variable in search_clause
@@ -263,7 +263,7 @@ public:
      * @param assignment: Vector where the value of the unit variables will be written. This vector must have the same
      * length than the number of clauses.
      */
-    void UnitPropagation(vector<bool> &assignment);
+    void UnitPropagation();
 
     /**
      * @brief Function that performs a partial assignment. If a variable_index is true, we have to remove the clauses where

@@ -33,36 +33,39 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
                 va_s = this->AssociatedGraph.getNegativeClausesOfVariable(va[j]);
                 va_u = this->AssociatedGraph.getPositiveClausesOfVariable(va[j]);
             }
-
-            // Calculation of product u
-            for (auto b : va_u) {
-                if (b != search_clause) {
-                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
-                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
-                    product_u *= weight;
-                    pi_0 *= weight;
-                }
-            }
-            // Calculation of product s
-            for (auto b : va_s) {
-                if (b != search_clause) {
-                    aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
-                    weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
-                    product_s *= weight;
-                    pi_0 *= weight;
-                }
-            }
-            product_u = product_u < this->lower_bound ? 0.0 : product_u;
-            product_s = product_s < this->lower_bound ? 0.0 : product_s;
-            pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
-            pi_u = (1.0 - product_u) * product_s;
-            pi_s = (1.0 - product_s) * product_u;
-
-            // Check the division by zero.
-            if ((pi_u + pi_s + pi_0) == 0) {
-                exit(1);
+            if (va_s.size() == 1 && va_u.empty()) {
+                survey = 1;
             } else {
-                survey *= (pi_u / (pi_u + pi_s + pi_0));
+                // Calculation of product u
+                for (auto b : va_u) {
+                    if (b != search_clause) {
+                        aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                        weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                        product_u *= weight;
+                        pi_0 *= weight;
+                    }
+                }
+                // Calculation of product s
+                for (auto b : va_s) {
+                    if (b != search_clause) {
+                        aux_index = this->AssociatedGraph.getIndexOfVariable(b, va[j]);
+                        weight = 1.0 - this->AssociatedGraph.getEdgeW(b, aux_index);
+                        product_s *= weight;
+                        pi_0 *= weight;
+                    }
+                }
+                product_u = product_u < this->lower_bound ? 0.0 : product_u;
+                product_s = product_s < this->lower_bound ? 0.0 : product_s;
+                pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
+                pi_u = (1.0 - product_u) * product_s;
+                pi_s = (1.0 - product_s) * product_u;
+
+                // Check the division by zero.
+                if ((pi_u + pi_s + pi_0) == 0) {
+                    exit(1);
+                } else {
+                    survey *= (pi_u / (pi_u + pi_s + pi_0));
+                }
             }
         } else {
             // Get the index for the setEdgeW function.
@@ -210,7 +213,7 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
                 true_assignment[max_index] = assign;
                 this->AssociatedGraph.PartialAssignment(max_index, assign);
                 // Calling unit propagation with the assignment applied.
-                AssociatedGraph.UnitPropagation(true_assignment);
+                this->AssociatedGraph.UnitPropagation();
                 // If there is a contradiction, we return CONTRADICTION
                 if (AssociatedGraph.Contradiction()) {
                     true_assignment.clear();
@@ -261,7 +264,7 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
                 true_assignment[ordered_indexes[i]] =  assign;
                 walksat_assignment[ordered_indexes[i]] = assign ? 1 : -1;
                 // Calling unit propagation with the assignment applied.
-                AssociatedGraph.UnitPropagation(true_assignment);
+                this->AssociatedGraph.UnitPropagation();
                 // If there is a contradiction, we return CONTRADICTION
                 if (AssociatedGraph.Contradiction()) {
                     true_assignment.clear();

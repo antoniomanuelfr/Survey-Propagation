@@ -14,19 +14,27 @@ FactorGraph::FactorGraph(const std::string &path, int seed) {
     ChangeWeights(generate_rand);
 }
 
-uvector FactorGraph::getUnitVars() const {
-    uvector unit_vars;
+void FactorGraph::getUnitVars(std::unordered_map<unsigned int, bool> &unit_vars) const {
+    unsigned int variable;
+    bool variable_assignment;
     for (int i = 0; i < this->NumberClauses; i++) {
+        variable = 0;
         int pos_size = this->PositiveVariablesOfClause[i].size(), neg_size = this->NegativeVariablesOfClause[i].size();
         if (pos_size + neg_size == 1) {
             if (pos_size == 1) {
-                unit_vars.push_back(this->PositiveVariablesOfClause[i][0]);
+                variable = this->PositiveVariablesOfClause[i][0];
+                variable_assignment = true;
             } else {
-                unit_vars.push_back(this->NegativeVariablesOfClause[i][0]);
+                variable = this->NegativeVariablesOfClause[i][0];
+                variable_assignment = false;
+            }
+        }
+        if (variable != 0 ) {
+            if (unit_vars.find(variable) == unit_vars.end()) {
+                unit_vars.insert(std::pair<unsigned int, bool> (variable, variable_assignment));
             }
         }
     }
-    return unit_vars;
 }
 
 unsigned int FactorGraph::getIndexOfVariable(unsigned int search_clause, int variable) const {
@@ -172,12 +180,23 @@ void FactorGraph::ChangeWeights(bool rand) {
     }
 }
 
-void FactorGraph::UnitPropagation(vector<bool> &assignment) {
-    uvector unit_vars = this->getUnitVars();
-    for (auto unit_var : unit_vars) {
-        assignment[unit_var] = unit_var > 0;
-        this->PartialAssignment(unit_var - 1, unit_var > 0);
-    }
+void FactorGraph::UnitPropagation() {
+    std::unordered_map<unsigned int, bool> unit_vars;
+
+    this->getUnitVars(unit_vars);
+    auto it = unit_vars.begin();
+
+
+    do {
+        while (it != unit_vars.end()) {
+            this->PartialAssignment(it->first - 1, it->second);
+            unit_vars.erase(it->first);
+            it = unit_vars.begin();
+
+        }
+        this->getUnitVars(unit_vars);
+        it = unit_vars.begin();
+    } while (!unit_vars.empty());
 }
 
 void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vector<bool> &satisfied) {

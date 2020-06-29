@@ -12,8 +12,8 @@ for i in {"4.21","4.22","4.23","4.24"}; do
 	mkdir "${cnfdir}/${N}/${i}"
 	rm -rf
 	for j in {1..50}; do
-		nvars=$(echo "$i * $N" | bc)
-		echo "N=${N}, nvars = ${nvars}, i = ${i}, j = ${j}"
-		../../satgenerators/random  -m $N -n $nvars -o "${cnfdir}/${N}/${i}/cnf_${N}_${nvars}_${j}.cnf" -s $2 || exit 1
+		n_clauses=$(echo "$i * $N" | bc)
+		echo "N=${N}, n_clauses = ${n_clauses}, i = ${i}, j = ${j}"
+		../../satgenerators/random  -n $N -m $n_clauses -o "${cnfdir}/${N}/${i}/cnf_${N}_${n_clauses}_${j}.cnf" -s $2 || exit 1
 	done
 done

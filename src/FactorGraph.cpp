@@ -4,14 +4,50 @@
 
 #include "FactorGraph.h"
 
-FactorGraph::FactorGraph(const std::string &path, int seed) {
+std::ostream &operator << (std::ostream &out, const clause &clause) {
+    for (auto i : clause) {
+        out << i << " " ;
+    }
+    out << "0" << std::endl;
+    return out;
+}
+
+vector<std::string> SplitString(const std::string &str, char delim) {
+    if (str.empty()) {
+        return vector<std::string>();
+    }
+    // Vector with the sub-strings
+    vector<std::string> cont;
+    std::size_t current, previous = 0;
+    // Find the first delimiter
+    current = str.find(delim);
+    while (current != std::string::npos) {
+        cont.push_back(str.substr(previous, current - previous));
+        previous = current + 1;
+        current = str.find(delim, previous);
+    }
+    cont.push_back(str.substr(previous, current - previous));
+    return cont;
+}
+
+bool operator == (const clause &c1, const clause &c2) {
+    if (c1.size() != c2.size()) {
+        return false;
+    }
+    for (int i = 0; i < c1.size(); i++) {
+        if (c1[i] != c2[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+FactorGraph::FactorGraph(const std::string &path) {
     int n_clauses = 0, n_variables = 0;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
-    this->seed = seed;
-    bool generate_rand = seed != -1;
-    ChangeWeights(generate_rand);
+    ChangeWeights();
 }
 
 void FactorGraph::getUnitVars(std::unordered_map<unsigned int, bool> &unit_vars) const {
@@ -163,11 +199,11 @@ int FactorGraph::Connection(unsigned int search_clause, unsigned int variable, b
     return pos;
 }
 
-void FactorGraph::ChangeWeights(bool rand) {
+void FactorGraph::ChangeWeights() {
     if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
 
-    std::default_random_engine generator(this->seed); // Random engine generator.
+    std::default_random_engine generator(SEED); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
@@ -175,7 +211,7 @@ void FactorGraph::ChangeWeights(bool rand) {
     for(int i = 0; i < this->NumberClauses; i++) {
         actual_clause = this->Clause(i);
         for (int j = 0; j < actual_clause.size(); j++) {
-            this->EdgeWeights[i].push_back(rand ? distribution(generator) : 1.0);
+            this->EdgeWeights[i].push_back(distribution(generator));
         }
     }
 }
@@ -372,7 +408,7 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
         }
     }
 
-    std::default_random_engine gen(this->seed); // Random engine generator.
+    std::default_random_engine gen(SEED); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
@@ -458,40 +494,3 @@ bool FactorGraph::CheckAssignment(const vector<bool> &assignment) const {
     return true;
 }
 
-std::ostream &operator << (std::ostream &out, const clause &clause) {
-    for (auto i : clause) {
-        out << i << " " ;
-    }
-    out << "0" << std::endl;
-    return out;
-}
-
-vector<std::string> SplitString(const std::string &str, char delim) {
-    if (str.empty()) {
-        return vector<std::string>();
-    }
-    // Vector with the sub-strings
-    vector<std::string> cont;
-    std::size_t current, previous = 0;
-    // Find the first delimiter
-    current = str.find(delim);
-    while (current != std::string::npos) {
-        cont.push_back(str.substr(previous, current - previous));
-        previous = current + 1;
-        current = str.find(delim, previous);
-    }
-    cont.push_back(str.substr(previous, current - previous));
-    return cont;
-}
-
-bool operator == (const clause &c1, const clause &c2) {
-    if (c1.size() != c2.size()) {
-        return false;
-    }
-    for (int i = 0; i < c1.size(); i++) {
-        if (c1[i] != c2[i]) {
-            return false;
-        }
-    }
-    return true;
-}

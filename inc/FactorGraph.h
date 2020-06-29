@@ -34,6 +34,22 @@ typedef vector<vector<double>> wmatrix;
 bool operator == (const clause &c1, const clause &c2);
 
 /**
+ * @brief Operator << overload for clause. The output will have DIMACS syntax
+ * @param out: Ostream object (can be a file, standard output).
+ * @param clause: Clause vector that is going to be printed out.
+ * @return Ostream object with the contents of clause.
+ */
+std::ostream &operator << (std::ostream &out, const clause &clause);
+
+/**
+ * @brief Split a string separated by a delimiter.
+ * @param str: String that is going to be splitted.
+ * @param delim: Delimiter. By default is an space
+ * @return A vector<string> with the splits of the string.
+ */
+vector<std::string> SplitString(const std::string& str, char delim = ' ');
+
+/**
  * @brief Class for handle the factor graph representation of a CNF formula.
  *  The variables in a DIMACS file are in the range [1,NumberVariables]
  *  and the 0 variable means that the clause has finished. The representation that is used goes from
@@ -58,8 +74,6 @@ private:
     int NumberClauses{0};
     /** Variable that storage the number of variables. */
     int NumberVariables{0};
-    /** Variable that storage the random seed that is going to be used for some algorithms. */
-    int seed{0};
 
     /**
      * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjunctive normal form).
@@ -100,7 +114,6 @@ public:
         this->PositiveClausesOfVariable = fc.PositiveClausesOfVariable;
         this->NegativeClausesOfVariable = fc.NegativeClausesOfVariable;
         this->EdgeWeights = fc.EdgeWeights;
-        this->seed = fc.seed;
 
         this->NumberClauses = fc.NumberClauses;
         this->NumberVariables = fc.NumberVariables;
@@ -109,9 +122,8 @@ public:
     /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
-     * @param seed: Seed for the random number generator (used for the function ChangeWeights).
      */
-    explicit FactorGraph(const std::string &path, int seed);
+    explicit FactorGraph(const std::string &path);
 
     /**
      * @brief Getter for NumberClauses.
@@ -249,12 +261,9 @@ public:
     [[nodiscard]] int Connection(unsigned int search_clause, unsigned int variable, bool &positive) const;
 
     /**
-     * @brief Change the weights vector. If the weights are generated randomly this will be generated following a
-     * normal distribution. To change the weights specify a different seed.
-     * @param rand: If true random weights will be generated. If it's not true all weights will be 1. Defaults to true.
-     * @param seed: Random seed for the number generator. Defaults to 0.
+     * @brief Change the weights vector using random numbers in the range (0,1).
      */
-    void ChangeWeights(bool rand);
+    void ChangeWeights();
 
     /**
      * @brief Function that performs Unit Propagation. If a variable is a unit variable, the assignment of that variable
@@ -356,19 +365,4 @@ public:
     friend std::ostream &operator << (std::ostream &out, const FactorGraph &graph);
 };
 
-/**
- * @brief Operator << overload for clause. The output will have DIMACS syntax
- * @param out: Ostream object (can be a file, standard output).
- * @param clause: Clause vector that is going to be printed out.
- * @return Ostream object with the contents of clause.
- */
-std::ostream &operator << (std::ostream &out, const clause &clause);
-
-/**
- * @brief Split a string separated by a delimiter.
- * @param str: String that is going to be splitted.
- * @param delim: Delimiter. By default is an space
- * @return A vector<string> with the splits of the string.
- */
-vector<std::string> SplitString(const std::string& str, char delim = ' ');
 #endif //FACTOR_GRAPH_H

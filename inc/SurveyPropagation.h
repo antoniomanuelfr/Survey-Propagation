@@ -13,6 +13,9 @@
 
 #include <utility>
 #include "FactorGraph.h"
+
+[[nodiscard]] uvector genIndexVector(unsigned int N);
+
 /**
  * @brief Class for the implementation of the survey propagation algorithm.
  */
@@ -26,8 +29,6 @@ private:
     unsigned int n_iters;
     /** Precision value. */
     double precision;
-    /** Random seed that is going to be used. */
-    int seed;
     /** If a survey is lower than lower_bound, the survey will be 0. */
     double lower_bound;
     /** Number of iterations for WalkSAT algorithm. */
@@ -67,18 +68,18 @@ public:
      * @param AssociatedGraph FactorGraph object with the formula that is going to be used.
      * @param n_iters: Maximum number of iterations. Defaults to 1000.
      * @param precision: Precision of the algorithm. Defaults to 0.1.
-     * @param seed: Random seed that is going t be used.
      * @param bound: If a survey is lower than bound, it will be set to 0.
      * @param w_iters: Number of iteration for WalkSAT algorithm.
      * @param flips: Number of flips for WalkSAT algorithm.
      * @param noise: Noise parameter for WalkSAT algorithm.
      */
-    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 10e3, double precision = 10e-3,
-            int seed = 0, double bound = 1e-16, unsigned int w_iters = 1000, unsigned flips = 100, double noise = 0.5) {
+    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 10e3,
+                               double precision = 10e-3,
+                               double bound = 1e-16, unsigned int w_iters = 1000, unsigned int flips = 100,
+                               double noise = 0.5) {
         this->AssociatedGraph = AssociatedGraph;
         this->n_iters = n_iters;
         this->precision = precision;
-        this->seed = seed;
         this->lower_bound = bound;
         this->walksat_iters = w_iters;
         this->walksat_flips = flips;

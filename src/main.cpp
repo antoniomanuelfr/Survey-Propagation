@@ -13,8 +13,16 @@ static vector<string> cnf_folder;
 void initializeCnfFolder(const string& folder = "") {
     cnf_folder.clear();
     // Get the files of the folder and save the path in the folder vector.
-    for (const auto &entry : filesystem::directory_iterator(CNF_PATH + folder)) {
-        cnf_folder.push_back(entry.path().string());
+    try {
+
+        for (const auto &entry : filesystem::directory_iterator(CNF_PATH + folder)) {
+            cnf_folder.push_back(entry.path().string());
+        }
+
+    } catch (const std::exception& ex) {
+        std::cerr << ex.what() << std::endl;
+        exit(1);
+
     }
 }
 
@@ -83,8 +91,8 @@ void Experiment(int N) {
             cout << p.str() << endl;
             initializeCnfFolder(p.str());
             for(const auto &path : cnf_folder) {
-                FactorGraph orig(path, 0), fg(orig);
-                SurveyPropagation SP (fg);
+                FactorGraph orig(path);
+                SurveyPropagation SP (orig);
                 int res = SP.SIDF(assignment, f);
                 switch (res) {
                     case SAT:
@@ -116,12 +124,12 @@ void Experiment(int N) {
 
 void TestCNF() {
     initializeCnfFolder();
-    FactorGraph my_graph(cnf_folder[selectFormula()], 0);
+    FactorGraph my_graph(cnf_folder[selectFormula()]);
     SurveyPropagation sp(my_graph);
     std::vector<bool> assignment;
 
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;
-    if (assignment.size() != 0) {
+    if (!assignment.empty()) {
         for (auto it : assignment)
             cout << it << " ";
         cout << endl;
@@ -129,6 +137,6 @@ void TestCNF() {
     }
 }
 int main() {
-//Experiment(10000);}
-    TestCNF();
+    Experiment(1000);
+    //TestCNF();
 }

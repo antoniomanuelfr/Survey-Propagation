@@ -4,6 +4,14 @@
 
 #include "SurveyPropagation.h"
 
+uvector genIndexVector(unsigned int N) {
+    uvector ordered_indexes;
+    ordered_indexes.resize(N);
+    std::iota(ordered_indexes.begin(), ordered_indexes.end(), 0);
+
+    return ordered_indexes;
+}
+
 void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     // Preconditions: Clause and variable must be in the range and there has to be a connection.
     if (search_clause > this->AssociatedGraph.getNClauses() || variable > this->AssociatedGraph.getNVariables()) {
@@ -79,11 +87,11 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
 int SurveyPropagation::SP(bool &trivial) {
     bool converged;
     wmatrix prev_warnings;
-    std::default_random_engine generator(seed); // Random engine generator.
+    std::default_random_engine generator(SEED); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
-    uvector clauses_indexes(this->AssociatedGraph.getNClauses()), var_indexes;
+    uvector clauses_indexes = genIndexVector(this->AssociatedGraph.getNClauses()), var_indexes;
     clause clause;
-    std::iota(clauses_indexes.begin(), clauses_indexes.end(), 0); // Generate the indexes vector.
+
     for (int iters = 0; iters < this->n_iters; iters++) {
         converged = true;
         trivial = true;
@@ -233,15 +241,17 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
 }
 
 int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
+
     if (!true_assignment.empty()) {
         true_assignment.clear();
     }
+    true_assignment.resize(this->AssociatedGraph.getNVariables(), false);
     bool trivial_surveys;
     int max_index;
     vector<int> walksat_assignment(this->AssociatedGraph.getNVariables(), 0);
     vector<double> positive_w, negative_w, zero_w;
-    vector<unsigned int> ordered_indexes, fixed_variables;
-    vector<bool> assignment_fixed_vars;
+    uvector ordered_indexes;
+
     // The surveys are randomized by default.
     if (this->SP(trivial_surveys) == SP_CONVERGED) {
         std::cout << "SP has converged." << std::endl;
@@ -250,38 +260,29 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
             std::cout << "The surveys are not trivial, starting decimate process." << std::endl;
             this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
             // Get the indexes of the higher biases.
-            ordered_indexes.clear();
-            ordered_indexes.resize(positive_w.size());
-            std::iota(ordered_indexes.begin(), ordered_indexes.end(), 0);
+            ordered_indexes = genIndexVector(positive_w.size());
             std::sort(ordered_indexes.begin(), ordered_indexes.end(), [&](int w1, int w2) {
                 return std::abs(positive_w[w1] - negative_w[w1]) > std::abs(positive_w[w2] - negative_w[w2]);
             });
-            fixed_variables.clear();
 
             for (int i = 0; i < ceil(f * this->AssociatedGraph.getNVariables()); i++) {
                 bool assign = std::abs(positive_w[ordered_indexes[i]]) > std::abs(negative_w[ordered_indexes[i]]);
                 this->AssociatedGraph.PartialAssignment(ordered_indexes[i], assign);
+                // Update the true assignment vector with the selected clause.
                 true_assignment[ordered_indexes[i]] =  assign;
                 walksat_assignment[ordered_indexes[i]] = assign ? 1 : -1;
-                // Calling unit propagation with the assignment applied.
-                this->AssociatedGraph.UnitPropagation();
                 // If there is a contradiction, we return CONTRADICTION
                 if (AssociatedGraph.Contradiction()) {
                     true_assignment.clear();
+                    std::cout << "A contradiction was founded" << std::endl;
                     return CONTRADICTION;
-                } else if (AssociatedGraph.EmptyClause()) {  // If the graph is the empty clause we return SAT.
+                // If the graph is the empty clause we return SAT.
+                } else if (AssociatedGraph.EmptyClause()) {
                     return SAT;
                 }
+                // Calling unit propagation with the assignment applied.
+                this->AssociatedGraph.UnitPropagation();
             }
-        } else {
-            std::cout << "The survey are trivial, starting local search" << std::endl;
-            walksat_assignment.clear();
-            for (int it : fixed_variables) {
-                walksat_assignment[it] = true_assignment[it] ? 1 : -1;
-            }
-            true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
-                                                            this->walksat_noise, walksat_assignment);
-            return true_assignment.empty() ? PROB_UNSAT : SAT;
         }
     } else {
         std::cout << "SP did not converged." << std::endl;
@@ -289,9 +290,8 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
         true_assignment.clear();
         return SP_UNCONVERGED;
     }
+
     true_assignment = this->AssociatedGraph.WalkSAT(this->walksat_iters, this->walksat_flips,
                                                     this->walksat_noise, walksat_assignment);
     return true_assignment.empty() ? PROB_UNSAT : SAT;
 }
-
-

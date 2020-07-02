@@ -1,0 +1,25 @@
+\section{Introducción}
+En este trabajo se aborda una solución una variante del problema de satisfacibilidad booleana, en el que se tiene clausulas formadas por un número fijo de literales o variables (también conocido como K-SAT), usando un algoritmo llamado \textit{Survey Propagation}, diseñado por A. Braunstein, M. Mezard, R. Zecchina. \\\\
+El problema de satisfacibilidad booleana es un problema del campo de la lógica en el que se busca una interpretación que satisfaga un conjunto de formulas booleanas $\Gamma$.\\\\
+En el álgebra de Boole las variables tienen dos estados: verdadero o falso y se definen los siguientes operadores:
+\begin{enumerate}[1.]
+	\item \textbf{Complementario:} $\neg$ Este operador unario nos convierte una variable al estado contrario (de falso a verdadero y de verdadero a falso).
+	\item \textbf{Disyunción:} $\lor$ Este operador binario devuelve verdadero si una de los dos variables está en el estado verdadero.
+	\item \textbf{Conjunción:} $\land$ Este operador binario devuelve verdadero solo cuando ambas variables sean verdaderas.
+\end{enumerate}
+Una fórmula booleana está compuesta por un número de variables booleanas, en nuestro caso el número de variables que forma una fórmula booleana es igual a $K$ conectadas con los operadores mencionados previamente. Un ejemplo de una formula de 3 variables seria: $x \lor (y \land z)$.\\
+En este trabajo se ha usado estas formulas en su \textbf{Forma Normal Conjuntiva} (CNF en inglés).
+Una forma estará en forma normal conjuntiva si corresponde a una conjunción de clausulas, donde cada clausula es una disyunción de variables. La forma normal conjuntiva de la formula anterior es $(x \lor y)\land (x \lor z)$.\\\\
+El problema SAT trata de buscar una asignación de las variables que componen la fórmula que la haga satisfacible.
+Si tenemos la fórmula en forma normal conjuntiva, el objetivo es buscar aquella asignación que satisfaga (tras aplicar la interpretación a la clausula y resolver los operadores que forman dicha clausula, el valor sea verdadero) cada una de las clausulas que componen la fórmula. \textbf{Una} interpretación que satisface la formula anterior seria:
+\begin{itemize}
+	\item $x=1$
+	\item $y=0$
+	\item $z=0$
+\end{itemize}
+Si nos fijamos, en la formula anterior con que la variable $x$ sea verdadera sería suficiente para que la fórmula sea satisfacible.\\\\
+
+Dentro del mundo de la computación, este problema pertenece al grupo de los problemas NP-completos, es decir, es un problema que no se puede completar en un tiempo polinomial usando algoritmos de búsqueda. \\\\
+El algoritmo \textit{Survey Propagation} es un algoritmo no completo, es decir, si hay una formula que es satisfacible \textbf{puede} (o no) encontrar una interpretación que la satisfaga.
+Estos algoritmos son de interés debido a que suelen ser mejores en tiempo a la hora de resolver problemas más grandes debido a que no son tan costosos a la hora de ejecutarlos como algoritmos clásicos (branch \& bound, búsqueda en profundidad, etc).\\\\
+En este trabajo se afronta también la integración con un algoritmo completo llamado Glucose. Esta integración se explicará de una forma más detallada en secciones siguientes, pero como resumen, este algoritmo tiene una fase en la que se selecciona una variable de la formula y se asigna siguiendo un criterio. Lo que se ha hecho es usar \textit{Survey propagation} para seleccionar una variable y su interpretación.

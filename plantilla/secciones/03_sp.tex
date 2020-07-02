@@ -1,0 +1,39 @@
+\section{Survey progation}
+\subsection{Introducción}
+Survey propagation es un algoritmo \textbf{NO} completo para la resolución del problema K-SAT.
+Es un algoritmo que esta basado en el comportamiento de los cristales de espín donde se pudo reconocer que los patrones que existían cuando este material está en un estado de reposo se comportaban de una forma similar al problema SAT, usándose las fórmulas matemáticas que modelaban dicho comportamiento para diseñar el algoritmo en el que se basa este trabajo.\\\\
+Para comenzar, se va a explicar la representación que se usa en el algoritmo para las fórmulas. 
+\subsection{Representación Factor Graph}
+Este algoritmo hace uso de una representación en forma de grafo para resolver el problema. Esta representación se caracteriza por lo siguiente:
+\begin{enumerate}
+	\item Tenemos dos tipos de nodos:
+	\begin{itemize}
+		\item \textbf{Nodo variable.}
+		\item \textbf{Nodo clausula.}
+	\end{itemize}
+	\item Tenemos dos tipos de aristas:
+	\begin{itemize}
+		\item \textbf{Positiva.}
+		\item \textbf{Negativa.}
+	\end{itemize}
+\end{enumerate}
+
+Por cada variable que aparezca en la formula habrá un nodo variable. De igual manera ocurre con las clausulas, por cada clausula tendremos su correspondiente nodo clausula en el grafo. 
+Si una variable $x$ aparece en una clausula $i$ habrá una arista positiva si dicha variable aparece no negada y será negativa cuando dicha variable esté negada dentro de la clausula.
+\subsection{Fases del algoritmo}
+Este algoritmo consta de varias fases.
+A continuación se resume cada una de las fases que tiene este algoritmo:
+\begin{itemize}
+	\item \textbf{Fase de actualización de surveys:} En esta fase se actualiza el survey (peso) que hay en la arista que une un nodo variable con un nodo clausula, usando unas fórmulas matemáticas que se detallarán en siguientes secciones.
+	\item \textbf{Survey propagation:} En este paso, se ejecuta un determinado número de veces:
+	\begin{enumerate}
+		\item La fase de actualización de surveys sobre \textbf{todos} los surveys del grafo.
+		\item Se comprueba la condición de convergencia ()
+		\item Si converge, se pasa a la fase siguiente y si tras haber ejecutados los pasos anteriores y no haber llegado a un estado de convergencia, se aborta la ejecución.
+	\end{enumerate} 
+	\item \textbf{SID (Survey Inspired Decimation):} En esta fase se comprueba si los surveys son triviales (todos igual a 0). Si los surveys no son triviales, se usan los surveys calculados en la fase anterior para \textbf{elegir} una variable y su interpretación. Cuando se ha elegido se ejecuta un algoritmo llamado \textbf{unit propagation} (busca variables unitarias y le asigna el valor correspondiente) y se ejecuta esta fase de nuevo.\\
+	Si los surveys son triviales se usa una busqueda local para intentar buscar una solución (en el caso de este trabajo y del trabajo realizado en el paper se usó el algoritmo \textbf{WalkSAT})
+\end{itemize}
+\subsection{Formulación matemática}
+
+

@@ -71,55 +71,75 @@ string PrintSurveyPropagationResults(int sol) {
 void Experiment(int N) {
     std::vector<bool> assignment;
     std::ofstream out_file("results.csv");
-
+    int n_formulas = 0;
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
+    bool solved;
     int solved_formulas, unconverged, false_positives, unsat;
-    out_file << "alpha,";
+    out_file << "fractions/alphas,";
     for (auto i : alphas) {
         out_file << i << ",";
     }
     out_file << endl;
 
-    for (auto f : fractions) {
-        out_file << f << ",";
-        for (auto a : alphas) {
-            solved_formulas = unconverged = unsat = false_positives =0;
+    for (int alpha = 0; alpha < alphas.size(); alpha++) {
+        for (int frac = 0; frac < fractions.size(); frac++) {
+            solved_formulas = unconverged = unsat = false_positives = 0;
             std::stringstream p;
-            p << "/testCNF/" << N << "/" << std::setprecision(3) << a ;
+            p << "/testCNF/" << N << "/" << std::setprecision(3) << "4.22";
             cout << p.str() << endl;
             initializeCnfFolder(p.str());
-            for(const auto &path : cnf_folder) {
+            for (const auto &path : cnf_folder) {
+                std::cout << path << endl;
+
+
                 FactorGraph orig(path);
-                SurveyPropagation SP (orig);
-                int res = SP.SIDF(assignment, f);
+                SurveyPropagation SP(orig);
+                int res = SP.SIDF(assignment, frac);
                 switch (res) {
                     case SAT:
                         if (orig.CheckAssignment(assignment)) {
                             solved_formulas++;
                         } else {
+                            cout << "falso positivo path: " << path << std::endl;
                             false_positives++;
                         }
-                    break;
+                        break;
                     case SP_UNCONVERGED:
                         unconverged++;
                         break;
                     case PROB_UNSAT:
                         unsat++;
                         break;
+                    case CONTRADICTION:
+                        cerr << "Contraduction founded in " << path << endl;
+                        break;
                     default:
                         break;
                 }
             }
-            cout << "Results using f = " << f << " and alpha = " << a << ": " << endl;
+            cout << "Results using f = " << fractions[frac] << " and alpha = " << alphas[alpha] << ": " << endl;
             cout << "SAT = " << solved_formulas << ", SP UNCONVERGED = " << unconverged << ", UNSAT = " << unsat
                  << ", false positives = " << false_positives << endl;
-
-            out_file << (solved_formulas / N) << ",";
+            table[frac][alpha] = solved_formulas / N;
+            solved_formulas = 50;
+            if (solved_formulas == N) {
+                std::cout << "skip" << std::endl;
+                break;
+            }
+        }
+        break;
+    }
+    for (int f = 0; f < fractions.size(); f++) {
+        out_file << fractions[f] << ",";
+        for (int a = 0; a < alphas.size(); a++) {
+            out_file << table[f][a] << ",";
         }
         out_file << endl;
     }
+
+    //for ()
 }
 
 void TestCNF() {
@@ -137,6 +157,6 @@ void TestCNF() {
     }
 }
 int main() {
-    Experiment(1000);
+    Experiment(100);
     //TestCNF();
 }

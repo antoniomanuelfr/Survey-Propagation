@@ -87,16 +87,14 @@ void Experiment(int N) {
         for (int frac = 0; frac < fractions.size(); frac++) {
             solved_formulas = unconverged = unsat = false_positives = 0;
             std::stringstream p;
-            p << "/testCNF/" << N << "/" << std::setprecision(3) << "4.22";
-            cout << p.str() << endl;
+            p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
+            //cout << p.str() << endl;
             initializeCnfFolder(p.str());
             for (const auto &path : cnf_folder) {
-                std::cout << path << endl;
-
 
                 FactorGraph orig(path);
                 SurveyPropagation SP(orig);
-                int res = SP.SIDF(assignment, frac);
+                int res = SP.SIDF(assignment, fractions[frac]);
                 switch (res) {
                     case SAT:
                         if (orig.CheckAssignment(assignment)) {
@@ -123,13 +121,8 @@ void Experiment(int N) {
             cout << "SAT = " << solved_formulas << ", SP UNCONVERGED = " << unconverged << ", UNSAT = " << unsat
                  << ", false positives = " << false_positives << endl;
             table[frac][alpha] = solved_formulas / N;
-            solved_formulas = 50;
-            if (solved_formulas == N) {
-                std::cout << "skip" << std::endl;
-                break;
-            }
+
         }
-        break;
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";
@@ -138,8 +131,6 @@ void Experiment(int N) {
         }
         out_file << endl;
     }
-
-    //for ()
 }
 
 void TestCNF() {

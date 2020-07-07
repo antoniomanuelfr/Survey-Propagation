@@ -42,6 +42,14 @@ bool operator == (const clause &c1, const clause &c2) {
     return true;
 }
 
+uvector genIndexVector(unsigned int N) {
+    uvector ordered_indexes;
+    ordered_indexes.resize(N);
+    std::iota(ordered_indexes.begin(), ordered_indexes.end(), 0);
+
+    return ordered_indexes;
+}
+
 FactorGraph::FactorGraph(const std::string &path) {
     int n_clauses = 0, n_variables = 0;
     ReadDIMACS(path, n_clauses, n_variables);
@@ -222,13 +230,11 @@ void FactorGraph::UnitPropagation() {
     this->getUnitVars(unit_vars);
     auto it = unit_vars.begin();
 
-
     do {
         while (it != unit_vars.end()) {
             this->PartialAssignment(it->first - 1, it->second);
             unit_vars.erase(it->first);
             it = unit_vars.begin();
-
         }
         this->getUnitVars(unit_vars);
         it = unit_vars.begin();
@@ -262,7 +268,6 @@ void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vect
                 this->NegativeVariablesOfClause.erase(this->NegativeVariablesOfClause.begin() + (actual_clause));
                 this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
                 del++;
-
             }
         }
         // Make the Variables vectors with the new assignment.
@@ -394,19 +399,13 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
 }
 
 vector<bool>
-FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const {
+FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& fixed_variables) const {
 
     unsigned int min_index, v;
-    bool sat;
+    bool sat, skip;
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
-    // Check if there is a variable that is not going to be changed.
-    for (int i = 0; i < applied_assignment.size(); i++) {
-        if (applied_assignment[i] != 0) {
-            assignment[i] = applied_assignment[i] == 1;
-        }
-    }
 
     std::default_random_engine gen(SEED); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
@@ -414,12 +413,16 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
 
     for (int i = 0; i < max_tries; i++) {
         std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen));});
-        indexes.clear();
-        indexes.resize(this->NumberClauses);
-        std::iota(indexes.begin(), indexes.end(), 0);
+        // Check if there is a variable that is not going to be changed.
+        for (auto it : fixed_variables) {
+            assignment[it > 0 ? it : abs(it)] = it < 0;
+        }
+        indexes = genIndexVector(this->NumberClauses);
         if (!this->Contradiction()) {
+            // Update the sat_clasues vector of the clauses that where changed previously.
             this->SatisfiesF(assignment, sat_clauses, indexes);
             for (int flips = 0; flips < max_flips; flips++) {
+                skip = false;
                 // Get the clauses state of the clauses with the given assignment.
                 not_satisfied_clauses.clear();
                 sat = true;
@@ -456,8 +459,14 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 // Get the index of the variable that will be flipped
                 int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
                 // Flip the variable
-                if (applied_assignment[index] != 0)
+                for (auto it : fixed_variables) {
+                    if (abs(it) == C[v]) {
+                        skip = true;
+                    }
+                }
+                if (skip) {
                     continue;
+                }
                 assignment[index] = !assignment[index];
                 // Check if the new assignment satisfies the clauses where the selected variable appears.
                 // We update the variables that are going to be searched

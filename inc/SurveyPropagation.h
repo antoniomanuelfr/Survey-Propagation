@@ -14,8 +14,6 @@
 #include <utility>
 #include "FactorGraph.h"
 
-[[nodiscard]] uvector genIndexVector(unsigned int N);
-
 /**
  * @brief Class for the implementation of the survey propagation algorithm.
  */

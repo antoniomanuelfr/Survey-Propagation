@@ -56,6 +56,9 @@ vector<std::string> SplitString(const std::string& str, char delim = ' ');
  *  [0,NumberVariables). So when we are saying that PositiveClausesOfVariable[0] we are getting the clauses where the
  *  variable 1 is positive.
  **/
+
+[[nodiscard]] uvector genIndexVector(unsigned int N);
+
 class FactorGraph {
 
 private:
@@ -339,14 +342,14 @@ public:
      * @param max_flips: Maximum number of flips that the algorithm will do.
      * @param noise: Noise parameter (this will choose if taking a random variable of c or the variable with the lower
      * break count.
-     * @param applied_assignment: Vector that will be used to pre-assign variables. If the ith position is 1 the ith
+     * @param fixed_variables: Vector that will be used to pre-assign variables. If the ith position is 1 the ith
      * variable will be true, -1 will be false and if 0, walksat will be able to change it's assignment.
      * @return A boolean vector with the assignment (if found) that satisfies the formula. If the algorithm hasn't found
      * an assignment, it will return an empty vector. If the output of this function is discarded,
      * the compiler will raise a warning.
      */
     [[nodiscard]] vector<bool>
-    WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const;
+    WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& fixed_variables) const;
 
     /**
      * @brief Check if an assignment satisfies a clause.

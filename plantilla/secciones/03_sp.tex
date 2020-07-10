@@ -1,22 +1,27 @@
-\section{Survey progation}
+\section{Survey propagation}
 \subsection{Introducción}
-Survey propagation es un algoritmo \textbf{NO} completo para la resolución del problema K-SAT.
-Es un algoritmo que esta basado en el comportamiento de los cristales de espín donde se pudo reconocer que los patrones que existían cuando este material está en un estado de reposo se comportaban de una forma similar al problema SAT, usándose las fórmulas matemáticas que modelaban dicho comportamiento para diseñar el algoritmo en el que se basa este trabajo.\\\\
-Para comenzar, se va a explicar la representación que se usa en el algoritmo para las fórmulas. 
-
+Survey propagation es un algoritmo para la resolución del problema SAT.
+Es un algoritmo que está basado en el comportamiento de los vidrios de espín, donde se pudo reconocer que los patrones que existían cuando este material está en un estado de equilibrio se comportaban de una forma similar al problema SAT, usándose las fórmulas matemáticas que modelaban dicho comportamiento para diseñar el algoritmo en el que se basa este trabajo.\\\\
+Es un algoritmo de paso de mensajes entre los nodos variable y nodos clausula que estén conectados. En este problema al mensaje que existe entre los dos nodos se denomina \textit{survey:} $\eta_{a\rightarrow i} \in (0, 1) $.\\\\
+Para comenzar, se va a explicar las distintas fases que componen este algoritmo. 
 \subsection{Fases del algoritmo}
 Este algoritmo consta de varias fases.
 A continuación se resume cada una de las fases que tiene este algoritmo:
 \begin{itemize}
-	\item \textbf{Fase de actualización de surveys:} En esta fase se actualiza el survey (peso) que hay en la arista que une un nodo variable con un nodo clausula, usando unas fórmulas matemáticas que se detallarán en siguientes secciones.
-	\item \textbf{Survey propagation:} En este paso, se ejecuta un determinado número de veces:
+	\item \textbf{Fase de actualización de surveys:} En esta fase se actualiza el survey que hay en la arista que une un nodo variable con un nodo clausula, usando unas fórmulas matemáticas que se detallarán en siguientes secciones.
+	\item \textbf{Survey propagation:} En este paso, se ejecuta un  número fijado de veces:
 	\begin{enumerate}
 		\item La fase de actualización de surveys sobre \textbf{todos} los surveys del grafo.
-		\item Se comprueba la condición de convergencia ()
-		\item Si converge, se pasa a la fase siguiente y si tras haber ejecutados los pasos anteriores y no haber llegado a un estado de convergencia, se aborta la ejecución.
+		\item Se comprueba la condición de convergencia: La diferencia entre todos los surveys de la iteración anterior y los surveys tras actualizarlos debe ser menor a un epsilon previamente fijado.  
+		\item Si converge, se devuelve el conjunto de surveys calculado en la iteración actual. Si no se devolverá \textit{no convergido}. 
 	\end{enumerate} 
-	\item \textbf{SID (Survey Inspired Decimation):} En esta fase se comprueba si los surveys son triviales (todos igual a 0). Si los surveys no son triviales, se usan los surveys calculados en la fase anterior para \textbf{elegir} una variable y su interpretación. Cuando se ha elegido se ejecuta un algoritmo llamado \textbf{unit propagation} (busca variables unitarias y le asigna el valor correspondiente) y se ejecuta esta fase de nuevo.\\
-	Si los surveys son triviales se usa una busqueda local para intentar buscar una solución (en el caso de este trabajo y del trabajo realizado en el paper se usó el algoritmo \textbf{WalkSAT})
+	\item \textbf{SID (Survey Inspired Decimation):} Esta es la fase principal donde haciendo uso de las fases anteriores, se elige y se asigna una variable para ser asignada. Los pasos son los siguientes:
+	\begin{enumerate}[1º]
+		\item Se inicializan los surveys aleatoriamente.
+		\item Se ejecuta la fase de actualización de surveys, si converge se pasa a la siguiente fase. En caso contrario se aborta la ejecución.
+		\item Se usan los surveys calculados previamente, primero se comprueba si son triviales (todos igual a 0). Si no son triviales se calcula unos sesgos (se detallaran en siguientes secciones) y se usan dichos sesgos para seleccionar la variable con mayor sesgo y su asignación. Cuando se ha elegido se ejecuta un algoritmo llamado \textbf{unit propagation} (busca clausulas unitarias y le asigna el valor correspondiente a la variable para que dicha clausula quede satisfecha) y se ejecuta esta fase de nuevo.\\
+		En caso de que sean triviales se usa un proceso de búsqueda local para intentar buscar una solución (en el caso de este trabajo y del trabajo realizado en el artículo se usó el algoritmo \textbf{WalkSAT})
+	\end{enumerate}
 \end{itemize}
 \subsection{Formulación matemática}
 

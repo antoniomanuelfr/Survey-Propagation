@@ -11,7 +11,7 @@ Si tenemos la fórmula en forma normal conjuntiva, el objetivo es buscar aquella
 	\item $z=0$
 \end{itemize}
 Si nos fijamos, en la formula anterior con que la variable $x$ sea verdadera sería suficiente para que la fórmula sea satisfacible.\\\\
-El problema de satisfacibilidad booleana es un problema muy importante en el campo de la informática. Fue el primer problema que se demostró que era NP-completo. Fué demostrado por Stephen Cook en 1971.\\
+El problema de satisfacibilidad booleana es un problema muy importante en el campo de la informática. Fue el primer problema que se demostró que era NP-completo, demostrado por Stephen Cook en 1971.\\
 En este caso, tenemos 3 variables y tenemos un total de $2^3 = 8$ asignaciones distintas. Aquí podemos ver que este problema va a tener un espacio de búsqueda que va a crecer de forma exponencial a medida que se incrementa el número de variables. 
 Dentro del mundo de la computación, este problema pertenece a la clase de complejidad NP-completo, es decir, no conocemos un algoritmo que sea capaz de resolver este problema en un tiempo polinomial.\\\\
 Hay un gran interés en encontrar una solución a este problema, ya que al ser NP-completo, el resto de problemas pertenecientes a la clase NP se pueden reducir (realizar una conversión para adaptar el problema NP al problema SAT) a SAT, y encontrando una solución a SAT se podría usar dicha solución para resolver cualquier problema dentro de la clase NP.\\\\
@@ -26,6 +26,7 @@ En el álgebra de Boole las variables tienen dos estados: verdadero o falso y se
 	\item \textbf{Disyunción:} $\lor$ Este operador binario devuelve verdadero si una de los dos variables está en el estado verdadero.
 	\item \textbf{Conjunción:} $\land$ Este operador binario devuelve verdadero solo cuando ambas variables sean verdaderas.
 \end{enumerate}
+Dada una asignación para cada variable se dice que una fórmula es satisfacible si al sustituir cada variable por su asignación y resolver los operadores que aparezcan cada una de las clausulas, el valor de todas las clausulas es \textbf{verdadera.} 
 \subsection{Representación Factor Graph}
 Este algoritmo hace uso de una representación en forma de grafo bipartito para resolver el problema. Esta representación se caracteriza por lo siguiente:
 \begin{enumerate}
@@ -42,16 +43,31 @@ Este algoritmo hace uso de una representación en forma de grafo bipartito para 
 \end{enumerate}
 Por cada variable que aparezca en la formula habrá un nodo variable. De igual manera ocurre con las clausulas, por cada clausula tendremos su correspondiente nodo clausula en el grafo. 
 Si una variable $x$ aparece en una clausula $i$ habrá una arista positiva si dicha variable aparece no negada y será negativa cuando dicha variable esté negada dentro de la clausula.\\\\
-A continuación se muestra una representación gráfica usando esta representación de la siguiente fórmula: \[F = (x_1 \lor\neg x_3) \land (\neg x_1 \lor x_2 \lor x_4) \land (\neg x_3 \lor x_5) \land (\neg x_3 \lor \neg x_4 \lor x_5) \land (\neg x_2 \lor x_4 \lor x_6) \land (x_5)\]
+Si en un problema SAT de $N$ variables y $M$ clausulas, se sabe que el problema tiende a ser más dificil cuando $\alpha = \frac{M}{N}$ está cerca del límite experimental $\alpha_c$. Este límite separa las regiones donde la mayor parte de las clausulas son \textbf{satisfacibles} y la región donde todas las fórmulas son \textbf{no satisfacibles}.\\
+
 \pagebreak
+A continuación se muestra una representación gráfica usando esta representación de la siguiente fórmula:\\
+\[F = (x_1 \lor\neg x_3) \land (\neg x_1 \lor x_2 \lor x_4) \land (\neg x_3 \lor x_5) \land (\neg x_3 \lor \neg x_4 \lor x_5) \land (\neg x_2 \lor x_4 \lor x_6) \land (x_5)\]\\
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[scale=0.5]{img/fg}
 	\label{img:fg1}
 	\caption{Representación en factor graph de una fórmula.}
 \end{figure}\\
-En esta figura cada clausula se representa con una letra y las variables con los números que aparecen en los sub-índices de las variables. Por ejemplo si nos fijamos en la primera clausula, vemos que la variable $x_3$ aparece negada y la variable $x_1$ aparece sin negar. En el grafo, vemos como el nodo clausula $a$ esta conectado con una linea continua (no negada) al nodo variable $1$ y conectado con una linea discontinua (negada) al nodo variable $3$. \\\\
-Usando esta representación, se van a definir unos conjuntos que se usaran en el algoritmo: 
+En esta figura, cada clausula se representa con una letra y las variables con los números que aparecen en los sub-índices de las variables que aparecen en la fórmula anterior.\\
+Por ejemplo si nos fijamos en la primera clausula, vemos que la variable $x_3$ aparece negada y la variable $x_1$ aparece sin negar. En el grafo, vemos como el nodo clausula $a$ esta conectado con una linea continua (no negada) al nodo variable $1$ y conectado con una linea discontinua (negada) al nodo variable $3$. \\\\
+Usando esta representación, se van a definir unos conjuntos que se usarán en el algoritmo Survey Propagation:
 \begin{itemize}
-	\item
+	\item $V(i)$, con $i$ siendo un nodo variable: Este conjunto está formado por todas las clausulas en las que la variable $i$ aparece.
+	\item $V(a)$, con $a$ siendo un nodo clausula: Este conjunto está formado por todas las variables que aparecen en la clausula $a$.
+	\item $V_a^s (i)$, con $i$ siendo un nodo variable: Este conjunto está formado por todas las clausulas donde la variable i aparece con la misma polaridad que en la clausula $a$.
+	\item $V_{a}^u (i)$, con $i$ siendo un nodo variable: Este conjunto está formado por todas las clausulas en las que la variable $i$ aparece con una polaridad distinta que en la clausula $a$.
+	\item $V_{+} (i)$, con $i$ siendo un nodo variable: Este conjunto está formado por todas las clausulas donde la variable $i$ aparece positiva.
+	\item $V_{-} (i)$, con $i$ siendo un nodo variable: Este conjunto está formado por todas las clausulas donde la variable $i$ aparece negativa. 
+\end{itemize}
+En la figura anterior, si tomamos la variable $1$ tendremos que: 
+\begin{itemize}
+	\item $V(4) = \{b, d, e\}$.
+	\item $V_{b}^s (4) = \{c\}$
+	\item $V_{b}^u (4) = \{d\}$
 \end{itemize}

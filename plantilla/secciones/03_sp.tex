@@ -2,9 +2,10 @@
 \subsection{Introducción}
 Survey propagation es un algoritmo para la resolución del problema SAT.
 Es un algoritmo que está basado en el comportamiento de los vidrios de espín, donde se pudo reconocer que los patrones que existían cuando este material está en un estado de equilibrio se comportaban de una forma similar al problema SAT, usándose las fórmulas matemáticas que modelaban dicho comportamiento para diseñar el algoritmo en el que se basa este trabajo.\\\\
-Es un algoritmo de paso de mensajes entre los nodos variable y nodos clausula que estén conectados. En este problema al mensaje que existe entre los dos nodos se denomina \textit{survey:} $\eta_{a\rightarrow i} \in (0, 1) $.\\\\
+Es un algoritmo de paso de mensajes entre los nodos variable y nodos clausula que estén conectados. En este problema, la probabilidad de que el mensaje se mande desde el nodo clausula $a$ al nodo variable $i$ se denomina \textit{survey:} $\eta_{a\rightarrow i} \in (0, 1) $.\\\\
 Para comenzar, se va a explicar las distintas fases que componen este algoritmo. 
 \subsection{Fases del algoritmo}
+\label{fases_alg}
 Este algoritmo consta de varias fases.
 A continuación se resume cada una de las fases que tiene este algoritmo:
 \begin{itemize}
@@ -20,9 +21,66 @@ A continuación se resume cada una de las fases que tiene este algoritmo:
 		\item Se inicializan los surveys aleatoriamente.
 		\item Se ejecuta la fase de actualización de surveys, si converge se pasa a la siguiente fase. En caso contrario se aborta la ejecución.
 		\item Se usan los surveys calculados previamente, primero se comprueba si son triviales (todos igual a 0). Si no son triviales se calcula unos sesgos (se detallaran en siguientes secciones) y se usan dichos sesgos para seleccionar la variable con mayor sesgo y su asignación. Cuando se ha elegido se ejecuta un algoritmo llamado \textbf{unit propagation} (busca clausulas unitarias y le asigna el valor correspondiente a la variable para que dicha clausula quede satisfecha) y se ejecuta esta fase de nuevo.\\
-		En caso de que sean triviales se usa un proceso de búsqueda local para intentar buscar una solución (en el caso de este trabajo y del trabajo realizado en el artículo se usó el algoritmo \textbf{WalkSAT})
+		En caso de que sean triviales se usa un proceso de búsqueda local para intentar buscar una solución (en el caso de este trabajo y del trabajo realizado en el artículo, se usó el algoritmo \textbf{WalkSAT})
 	\end{enumerate}
 \end{itemize}
 \subsection{Formulación matemática}
+Como se ha mencionado en secciones anteriores, este algoritmo hace uso de unas fórmulas matemáticas que modelan el comportamiento de los vidrios de espín. Para cada una de las fases mencionadas en la sección \nameref{fases_alg} (esto esta en mayúscula porque es una referencia a la sección, tengo que ver como arreglarlo) se van a definir las siguientes fórmulas.a
+\subsubsection{Fase de actualización de surveys}
+En esta fase, se usa una clausula $a$ y una variable $i$ que aparezca en ella para actualizar el survey correspondiente. Para ello se calculan los siguientes números:
+\begin{enumerate}
+	\item Para cada $j \in V(a) \setminus i$:
+	\begin{equation}
+		\begin{aligned}
+			\Pi_{j \rightarrow a}^{u} = \left[ 1 - \prod_{b \in V_a^u(j)}(1 - \eta_{b\rightarrow j}) \right] \prod_{b \in V_a^s(j)}(1 - \eta_{b\rightarrow j})
+		\end{aligned}
+	\end{equation}
+	\begin{equation}
+		\begin{aligned}
+			\Pi_{j \rightarrow a}^{s} = \left[ 1 - \prod_{b \in V_a^s(j)}(1 - \eta_{b\rightarrow j}) \right] \prod_{b \in V_a^u(j)}(1 - \eta_{b\rightarrow j})
+		\end{aligned}
+	\end{equation}
+	\begin{equation}
+		\begin{aligned}
+			\Pi_{j \rightarrow a}^{0} = \prod_{b \in V(j) \setminus a}(1 - \eta_{b\rightarrow j})
+		\end{aligned}
+	\end{equation}
+	Si un conjunto como $V_a^s(j)$ es vacío, el producto asociado se fija a 1
+	\item Usando los números calculados previamente, se calcula el survey entre $a$ e $i$
+	\begin{equation}
+		\begin{aligned}
+		\eta_{a\rightarrow i} = \prod_{j\in V(a) \setminus i} \left[\frac{\Pi_{j\rightarrow a}^u}{\Pi_{j\rightarrow a}^u + \Pi_{j\rightarrow a}^s + \Pi_{j\rightarrow a}^0}\right]
+		\end{aligned}
+	\end{equation}
+	Si $V(a)\setminus i$ es vacío, entonces $\eta_{a\rightarrow i} = 1$
+\end{enumerate}
+\subsubsection{Survey Inspired Decimation}
+Como se menciona en la sección \nameref{fases_alg}, en la fase de \textit{SID} se calculaban unos sesgos. A continuación se detalla el proceso de cálculo de dichos sesgos. Para cada nodo variable $i$ existen tres sesgos:
+\begin{equation}
+	W_i^{(+)} = \frac{\hat{\Pi}_{i}^+}{\hat{\Pi}_{i}^+ + \hat{\Pi}_{i}^- + \hat{\Pi}_{i}^0} 
+\end{equation}
+\begin{equation}
+	W_i^{(-)} = \frac{\hat{\Pi}_{i}^-}{\hat{\Pi}_{i}^+ + \hat{\Pi}_{i}^- + \hat{\Pi}_{i}^0}
+\end{equation} 
+\begin{equation}
+	W_i^{(0)} = 1 - W_i^{(+)} - W_i^{(-)}
+\end{equation}
+Donde: 
+\begin{equation}
+	\begin{aligned}
+		\hat{\Pi}_{i}^+ = \left[ 1 - \prod_{a \in V_+(i)}(1 - \eta_{a\rightarrow i}) \right] \prod_{a \in V_-(i)}(1 - \eta_{a\rightarrow i})	
+	\end{aligned}
+\end{equation}
+\begin{equation}
+	\begin{aligned}
+	\hat{\Pi}_{i}^- = \left[ 1 - \prod_{a \in V_-(i)}(1 - \eta_{a\rightarrow i}) \right] \prod_{a \in V_+(i)}(1 - \eta_{a\rightarrow i})	
+	\end{aligned}
+\end{equation}
+\begin{equation}
+	\begin{aligned}
+		\hat{\Pi}_{i}^0 = \prod_{a \in V(i)}(1 - \eta_{a\rightarrow i})
+	\end{aligned}
+\end{equation}                               
+
 
 

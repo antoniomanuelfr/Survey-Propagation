@@ -22,7 +22,7 @@ class SurveyPropagation {
 private:
 
     /** Factor Graph of the formula that is going to be checked. */
-    FactorGraph AssociatedGraph;
+    FactorGraph *AssociatedGraph;
     /** Number of iterations of the algorithm. */
     unsigned int n_iters;
     /** Precision value. */
@@ -63,7 +63,7 @@ public:
 
     /**
      * @brief Constructor for the Survey Propagation class.
-     * @param AssociatedGraph FactorGraph object with the formula that is going to be used.
+     * @param path FactorGraph object with the formula that is going to be used.
      * @param n_iters: Maximum number of iterations. Defaults to 1000.
      * @param precision: Precision of the algorithm. Defaults to 0.1.
      * @param bound: If a survey is lower than bound, it will be set to 0.
@@ -71,11 +71,11 @@ public:
      * @param flips: Number of flips for WalkSAT algorithm.
      * @param noise: Noise parameter for WalkSAT algorithm.
      */
-    explicit SurveyPropagation(const FactorGraph &AssociatedGraph, unsigned int n_iters = 10e3,
+    explicit SurveyPropagation(const std::string& path, unsigned int n_iters = 10e3,
                                double precision = 10e-3,
                                double bound = 1e-16, unsigned int w_iters = 1000, unsigned int flips = 100,
                                double noise = 0.5) {
-        this->AssociatedGraph = AssociatedGraph;
+        this->AssociatedGraph = new FactorGraph(path);
         this->n_iters = n_iters;
         this->precision = precision;
         this->lower_bound = bound;

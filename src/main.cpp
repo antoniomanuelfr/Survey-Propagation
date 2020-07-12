@@ -93,7 +93,7 @@ void Experiment(int N) {
             for (const auto &path : cnf_folder) {
 
                 FactorGraph orig(path);
-                SurveyPropagation SP(orig);
+                SurveyPropagation SP(path);
                 int res = SP.SIDF(assignment, fractions[frac]);
                 switch (res) {
                     case SAT:
@@ -135,8 +135,9 @@ void Experiment(int N) {
 
 void TestCNF() {
     initializeCnfFolder();
-    FactorGraph my_graph(cnf_folder[selectFormula()]);
-    SurveyPropagation sp(my_graph);
+    int index = selectFormula();
+    FactorGraph my_graph(cnf_folder[index]);
+    SurveyPropagation sp(cnf_folder[index]);
     std::vector<bool> assignment;
 
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;

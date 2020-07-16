@@ -1,7 +1,7 @@
 #include <iostream>
 #include "SurveyPropagation.h"
 #include <filesystem>
-
+#include <omp.h>
 using namespace std;
 
 static vector<string> cnf_folder;
@@ -71,17 +71,16 @@ string PrintSurveyPropagationResults(int sol) {
 void Experiment(int N) {
     std::vector<bool> assignment;
     std::ofstream out_file("results.csv");
-    int n_formulas = 0;
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
-    bool solved;
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), 0.0));
     int solved_formulas, unconverged, false_positives, unsat;
     out_file << "fractions/alphas,";
     for (auto i : alphas) {
         out_file << i << ",";
     }
     out_file << endl;
+    int iterator = 0;
 
     for (int alpha = 0; alpha < alphas.size(); alpha++) {
         for (int frac = 0; frac < fractions.size(); frac++) {
@@ -91,7 +90,6 @@ void Experiment(int N) {
             //cout << p.str() << endl;
             initializeCnfFolder(p.str());
             for (const auto &path : cnf_folder) {
-
                 FactorGraph orig(path);
                 SurveyPropagation SP(path);
                 int res = SP.SIDF(assignment, fractions[frac]);
@@ -99,6 +97,7 @@ void Experiment(int N) {
                     case SAT:
                         if (orig.CheckAssignment(assignment)) {
                             solved_formulas++;
+                            table[frac][alpha]++;
                         } else {
                             cout << "falso positivo path: " << path << std::endl;
                             false_positives++;
@@ -117,12 +116,10 @@ void Experiment(int N) {
                         break;
                 }
             }
-            cout << "Results using f = " << fractions[frac] << " and alpha = " << alphas[alpha] << ": " << endl;
-            cout << "SAT = " << solved_formulas << ", SP UNCONVERGED = " << unconverged << ", UNSAT = " << unsat
-                 << ", false positives = " << false_positives << endl;
-            table[frac][alpha] = solved_formulas / N;
-
+            iterator++;
         }
+        cout << "alpha = " << alphas[alpha] << endl;
+        break;
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";

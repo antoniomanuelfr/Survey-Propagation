@@ -23,7 +23,6 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
     for (int j = 0; j < va.size(); j++) {
         if (va[j] != variable) {
             product_s = product_u = pi_0 = 1.0;
-
             // Get the va_s (clauses where j appears with the same sign) and
             // v_u (clauses where j appears with the opposite sign) sets.
             if (va[j] > 0) {
@@ -92,11 +91,9 @@ int SurveyPropagation::SP(bool &trivial) {
         // Choose random clauses without repetition.
         std::shuffle(clauses_indexes.begin(), clauses_indexes.end(), generator);
         for (int index : clauses_indexes) {
-            var_indexes.clear();
             clause = this->AssociatedGraph->Clause(index);
+            var_indexes = genIndexVector(clause.size());
             // Choose random variable from the clause without repetition.
-            var_indexes.resize(clause.size());
-            std::iota(var_indexes.begin(), var_indexes.end(), 0);
             std::shuffle(var_indexes.begin(), var_indexes.end(), generator);
             // Update every edge.
             for (int i : var_indexes) {
@@ -140,7 +137,6 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
     zero_w.resize(this->AssociatedGraph->getNVariables());
     max_index = 0;
 
-    uvector positive_clauses, negative_clauses;
     unsigned int var_index_clause, variable_index;
     double positive_pi, negative_pi, zero_pi, pos_prod, neg_prod, survey, max = 0.0;
 
@@ -150,18 +146,16 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
         pos_prod = 1.0;
         neg_prod = 1.0;
         zero_pi = 1.0;
-        // Get the V_+ and V_- sets (clauses where the variable appears as positive and negative
-        positive_clauses = this->AssociatedGraph->getPositiveClausesOfVariable(variable);
-        negative_clauses = this->AssociatedGraph->getNegativeClausesOfVariable(variable);
+
         // Positive PI of variable
-        for (auto it : positive_clauses) {
+        for (auto it : this->AssociatedGraph->getPositiveClausesOfVariable(variable)) {
             var_index_clause = this->AssociatedGraph->getIndexOfVariable(it, variable);
             survey = 1 - this->AssociatedGraph->getEdgeW(it, var_index_clause);
             pos_prod *= survey;
             zero_pi *= survey;
         }
         // Negative PI of variable
-        for (auto it : negative_clauses) {
+        for (auto it : this->AssociatedGraph->getNegativeClausesOfVariable(variable)) {
             var_index_clause = this->AssociatedGraph->getIndexOfVariable(it, -variable);
             survey = 1 - this->AssociatedGraph->getEdgeW(it, var_index_clause);
             neg_prod *= survey;

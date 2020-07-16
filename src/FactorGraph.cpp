@@ -309,9 +309,9 @@ void FactorGraph::PartialAssignment(unsigned int variable_index, bool assignatio
             } else if (type && !assignation) {
                 deleted_variables_from_clauses[search_clause].push_back(variable_index + 1);
             }
-                // If the variable_index appears as positive and we assign it to positive or
-                // If the variable_index appears as negative and we assign it to negative,
-                // the clause will be satisfied and deleted.
+            // If the variable_index appears as positive and we assign it to positive or
+            // If the variable_index appears as negative and we assign it to negative,
+            // the clause will be satisfied and deleted.
             else {
                 satisfied_clauses[search_clause] = true;
             }
@@ -412,17 +412,16 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
     for (int i = 0; i < max_tries; i++) {
-        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen));});
+        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() {return static_cast<bool>(bdist(gen));});
         // Check if there is a variable that is not going to be changed.
         for (auto it : fixed_variables) {
-            assignment[it > 0 ? it : abs(it)] = it < 0;
+            assignment[it > 0 ? it : abs(it)] = it > 0;
         }
         indexes = genIndexVector(this->NumberClauses);
         if (!this->Contradiction()) {
             // Update the sat_clasues vector of the clauses that where changed previously.
             this->SatisfiesF(assignment, sat_clauses, indexes);
             for (int flips = 0; flips < max_flips; flips++) {
-                skip = false;
                 // Get the clauses state of the clauses with the given assignment.
                 not_satisfied_clauses.clear();
                 sat = true;
@@ -445,7 +444,6 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 // Check if there is any variable of C with break count equal to 0.
                 if (count[min_index] == 0) {
                     v = min_index;
-
                 } else { // If there the variable with the lower break count isn't zero.
                     // We choose a random v of C.
                     if (double_dist(gen) > noise) {
@@ -458,15 +456,6 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 }
                 // Get the index of the variable that will be flipped
                 int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
-                // Flip the variable
-                for (auto it : fixed_variables) {
-                    if (abs(it) == C[v]) {
-                        skip = true;
-                    }
-                }
-                if (skip) {
-                    continue;
-                }
                 assignment[index] = !assignment[index];
                 // Check if the new assignment satisfies the clauses where the selected variable appears.
                 // We update the variables that are going to be searched

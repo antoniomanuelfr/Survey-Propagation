@@ -32,41 +32,39 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
                 va_s = this->AssociatedGraph->getNegativeClausesOfVariable(va[j]);
                 va_u = this->AssociatedGraph->getPositiveClausesOfVariable(va[j]);
             }
-            if (va_s.size() == 1 && va_u.empty()) {
-                survey = 1;
-            } else {
-                // Calculation of product u
-                for (auto b : va_u) {
-                    if (b != search_clause) {
-                        aux_index = this->AssociatedGraph->getIndexOfVariable(b, va[j]);
-                        weight = 1.0 - this->AssociatedGraph->getEdgeW(b, aux_index);
-                        product_u *= weight;
-                        pi_0 *= weight;
-                    }
-                }
-                // Calculation of product s
-                for (auto b : va_s) {
-                    if (b != search_clause) {
-                        aux_index = this->AssociatedGraph->getIndexOfVariable(b, va[j]);
-                        weight = 1.0 - this->AssociatedGraph->getEdgeW(b, aux_index);
-                        product_s *= weight;
-                        pi_0 *= weight;
-                    }
-                }
-                product_u = product_u < this->lower_bound ? 0.0 : product_u;
-                product_s = product_s < this->lower_bound ? 0.0 : product_s;
-                pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
-                pi_u = (1.0 - product_u) * product_s;
-                pi_s = (1.0 - product_s) * product_u;
 
-                // Check the division by zero.
-                if ((pi_u + pi_s + pi_0) == 0) {
-                    //exit(1);
-                    std::cout << "asdfasfasf" << std::endl;
-                } else {
-                    survey *= (pi_u / (pi_u + pi_s + pi_0));
+            // Calculation of product u
+            for (auto b : va_u) {
+                weight = 1.0 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, va[j]));
+                product_u *= weight;
+            }
+            // Calculation of product s
+            for (auto b : va_s) {
+                if (b != search_clause) {
+                    weight = 1.0 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, va[j]));
+                    product_s *= weight;
                 }
             }
+
+            for (auto b : this->AssociatedGraph->getClausesOfVariable(variable)) {
+                if (b != search_clause) {
+                    weight = 1 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, variable));
+                    pi_0 *= weight;
+                }
+            }
+            product_u = product_u < this->lower_bound ? 0.0 : product_u;
+            product_s = product_s < this->lower_bound ? 0.0 : product_s;
+            pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
+            pi_u = (1.0 - product_u) * product_s;
+            pi_s = (1.0 - product_s) * product_u;
+
+            // Check the division by zero.
+            if ((pi_u + pi_s + pi_0) == 0) {
+                survey = 0.0;
+            } else {
+                survey *= (pi_u / (pi_u + pi_s + pi_0));
+            }
+
         } else {
             // Get the index for the setEdgeW function.
             index = j;
@@ -103,7 +101,7 @@ int SurveyPropagation::SP(bool &trivial) {
         // Check the convergence condition.
         for (int i = 0; i < prev_warnings.size() && converged; i++) {
             for (int j = 0; j < prev_warnings[i].size(); j++) {
-                trivial = trivial ? this->AssociatedGraph->getEdgeW(i, j) == 0 : trivial;
+                trivial = trivial ? this->AssociatedGraph->getEdgeW(i, j) == 0.0 : trivial;
                 if (std::abs(this->AssociatedGraph->getEdgeW(i, j) - prev_warnings[i][j]) > this->precision) {
                     converged = false;
                     break;

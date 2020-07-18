@@ -73,22 +73,24 @@ void Experiment(int N) {
     std::ofstream out_file("results.csv");
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), 0.0));
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
     int solved_formulas, unconverged, false_positives, unsat;
     out_file << "fractions/alphas,";
     for (auto i : alphas) {
         out_file << i << ",";
     }
     out_file << endl;
-    int iterator = 0;
-
+    int n_files;
+    bool not_solved;
     for (int alpha = 0; alpha < alphas.size(); alpha++) {
-        for (int frac = 0; frac < fractions.size(); frac++) {
+        not_solved = true;
+        for (int frac = 0; frac < fractions.size() && not_solved; frac++) {
             solved_formulas = unconverged = unsat = false_positives = 0;
             std::stringstream p;
             p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
             //cout << p.str() << endl;
             initializeCnfFolder(p.str());
+            n_files = 0;
             for (const auto &path : cnf_folder) {
                 FactorGraph orig(path);
                 SurveyPropagation SP(path);
@@ -99,7 +101,7 @@ void Experiment(int N) {
                             solved_formulas++;
                             table[frac][alpha]++;
                         } else {
-                            cout << "falso positivo path: " << path << std::endl;
+                            cout << "False positive in path: " << path << std::endl;
                             false_positives++;
                         }
                         break;
@@ -110,16 +112,17 @@ void Experiment(int N) {
                         unsat++;
                         break;
                     case CONTRADICTION:
-                        cerr << "Contraduction founded in " << path << endl;
+                        cerr << "Contradiction founded in " << path << endl;
                         break;
                     default:
                         break;
                 }
+            n_files++;
             }
-            iterator++;
+            not_solved = table[frac][alpha] == n_files;
         }
         cout << "alpha = " << alphas[alpha] << endl;
-        break;
+
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";

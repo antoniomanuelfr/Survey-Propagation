@@ -374,22 +374,27 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
                                    unsigned int &min_index) const {
 
     uvector break_count(s_clause.size(), 0);
-    int index;
+    vector<bool> copy(assign);
+    unsigned int variable_index;
     clause c;
     unsigned int min = this->NumberClauses;
     for (int i = 0; i < s_clause.size(); i++) {
+        variable_index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
         // Get the clauses where each variable appears.
         for (auto clause_index : this->getClausesOfVariable(s_clause[i])) {
             // If the clause is satisfied, we calculate the break count of that variable
             if (sat_clauses[clause_index]) {
-                c = this->Clause(clause_index);
-                index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
-                // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
-                if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
+                // flip the variable
+                copy[variable_index] = !copy[variable_index];
+                // check the assignment
+                if (this->SatisfiesC(copy, this->Clause(clause_index))) {
                     break_count[i]++;
-                    }
                 }
+                // Restore the assignment
+                copy[variable_index] = !copy[variable_index];
             }
+        }
+
         if (break_count[i] < min) {
             min = break_count[i];
             min_index = i;

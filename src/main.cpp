@@ -92,8 +92,8 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
             initializeCnfFolder(p.str());
             n_files = 1;
             for (const auto &path : cnf_folder) {
-                FactorGraph orig(path);
-                SurveyPropagation SP(path);
+                FactorGraph orig(path, 0);
+                SurveyPropagation SP(path, 0);
                 int res = SP.SIDF(assignment, fractions[frac]);
                 switch (res) {
                     case SAT:

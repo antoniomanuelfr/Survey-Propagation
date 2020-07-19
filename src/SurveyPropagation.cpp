@@ -12,7 +12,6 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
 
     clause va;
     int index = -1;
-    unsigned int aux_index;
     uvector va_u, va_s;
     double survey = 1.0, weight;
     double product_u, product_s, pi_u, pi_s, pi_0;
@@ -137,7 +136,7 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
     zero_w.resize(this->AssociatedGraph->getNVariables());
     max_index = 0;
 
-    unsigned int var_index_clause, variable_index;
+    unsigned int variable_index;
     double positive_pi, negative_pi, zero_pi, pos_prod, neg_prod, survey, max = 0.0;
 
     // For each variable we have to calculate the three pis.

@@ -128,6 +128,7 @@ public:
     /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
+     * @param seed: Seed that will be used. Defaults to 0.
      */
     explicit FactorGraph(const std::string &path, int seed = 0);
 
@@ -155,7 +156,7 @@ public:
      * the compiler will raise a warning.
      */
     [[nodiscard]] bool EmptyClause() const {
-        return (this->NumberClauses == 0) ;
+        return this->NumberClauses == 0;
     }
 
     /**
@@ -175,11 +176,11 @@ public:
     /**
      * @brief Getter for a specific edge weight.
      * @param search_clause: Clause of the edge.
-     * @param variable: Variable of the edge.
+     * @param variable: Position where the variable appears.
      * @return The assigned weight of the edge between search_clause and variable. If the output of this function is
      * discarded, the compiler will raise a warning.
      */
-    [[nodiscard]] double getEdgeW(unsigned int search_clause, unsigned int variable) const;
+    [[nodiscard]] double getEdgeW(unsigned int search_clause, unsigned int position) const;
 
     /**
      * @brief Function that return the weights matrix.
@@ -196,7 +197,7 @@ public:
      * @return A const reference to PositiveVariablesOfClauses. If the output of this function is discarded,
      * the compiler will raise a warning.
      */
-     [[maybe_unused]] [[nodiscard]] const uvector & getPositiveVariablesOfClause(unsigned int search_clause) const {
+    [[nodiscard]] const uvector & getPositiveVariablesOfClause(unsigned int search_clause) const {
         return this->PositiveVariablesOfClause[search_clause];
     }
 
@@ -206,7 +207,7 @@ public:
      * @return A const reference to NegativeVariablesOfClause. If the output of this function is discarded,
      * the compiler will raise a warning.
      */
-    [[maybe_unused]] [[nodiscard]] const uvector & getNegativeVariablesOfClause(unsigned int search_clause) const {
+    [[nodiscard]] const uvector & getNegativeVariablesOfClause(unsigned int search_clause) const {
         return this->NegativeVariablesOfClause[search_clause];
     }
 
@@ -251,10 +252,10 @@ public:
     /**
      * @brief Change the weight of a specific edge.
      * @param search_clause: Clause of the edge.
-     * @param variable: Variable of the edge.
+     * @param position: Position of the variable inside the EdgeWeights vector.
      * @param value: New weight of the edge.
      */
-    void setEdgeW(unsigned int search_clause, unsigned int variable, double value);
+    void setEdgeW(unsigned int search_clause, unsigned int position, double value);
 
     /**
      * @brief Check if a variable appears in a search_clause.
@@ -275,25 +276,23 @@ public:
      * @brief Function that performs Unit Propagation. If a variable is a unit variable, the assignment of that variable
      * is defined by the value of that variable (if the unit variable appears as positive, the assignment will be true
      * and if the variable appears as negative the assignment will be false).
-     * @param assignment: Vector where the value of the unit variables will be written. This vector must have the same
-     * length than the number of clauses.
      */
     void UnitPropagation();
 
     /**
-     * @brief Function that performs a partial assignment. If a variable_index is true, we have to remove the clauses where
-     * that variable_index appears as positive (because that clause will be satisfied) and remove that variable_index from the
-     * clause where the variable_index appears as negative.
-     * @param variable_index: Index of the variable_index that is going to be checked.
+     * @brief Function that performs a partial assignment. If a variable is true, we have to remove the clauses where
+     * that variable appears as positive (because that clause will be satisfied) and remove that variable from the
+     * clause where the variable appears as negative.
+     * @param variable_index: Index of the variable that is going to be checked.
      * @param assignation: True or false assignation to the variable_index.
      */
     void PartialAssignment(unsigned int variable_index, bool assignation);
 
     /**
-     * @brief Return the complete search_clause.
+     * @brief Return a complete clause.
      * @param search_clause: Clause to search.
      * @return Vector with all the variable that appears in search_clause. If the variable is true it will appear
-     * as positive and it will appear as negative if the variable if false. If the output of this function
+     * as positive and it will appear as negative if the variable is false. If the output of this function
      * is discarded, the compiler will raise a warning.
      */
     [[nodiscard]] clause Clause(unsigned int search_clause) const;
@@ -326,8 +325,8 @@ public:
     bool SatisfiesF(const vector<bool> &assign, vector<bool> &sat, const vector<unsigned int> &indexes) const;
 
     /**
-     * @brief Function that gets the break count from a set of satisfied clauses given a clause C (each variable in C is
-     * flipped and count the number of clauses that are still satisfied.
+     * @brief Function that gets the break count. From a set of satisfied clauses and given a clause C,
+     * this funtion will flip each variable in C and it will count the number of clauses that are still satisfied.
      * @param sat_clauses: Boolean vector where the ith position will be true if the ith clause is satisfied with the
      * given assign. False if it is not satisfied.
      * @param s_clause: Clause that will be used to calculate the break count.
@@ -340,7 +339,7 @@ public:
                                         const vector<bool> &assign, unsigned int &min_index) const;
 
     /**
-     * @brief WalkSAT algorithm for FactorGraph class.
+     * @brief WalkSAT algorithm.
      * @param max_tries: Maximum number of tries that the algorithm will do.
      * @param max_flips: Maximum number of flips that the algorithm will do.
      * @param noise: Noise parameter (this will choose if taking a random variable of c or the variable with the lower
@@ -355,7 +354,7 @@ public:
     WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& fixed_variables) const;
 
     /**
-     * @brief Check if an assignment satisfies a clause.
+     * @brief Check if an assignment satisfies the formula.
      * @param assignment: Boolean vector with the assignment where the ith position will be the assignment of the
      * ith variable.
      * @return True if the assignment satisfies the entire clause and false if it not.

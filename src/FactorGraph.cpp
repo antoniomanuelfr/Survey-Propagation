@@ -97,19 +97,20 @@ unsigned int FactorGraph::getIndexOfVariable(unsigned int search_clause, int var
     return index;
 }
 
-void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int variable, double value) {
-    if (search_clause < this->NumberClauses && variable < this->NumberVariables) {
-        this->EdgeWeights[search_clause][variable] = value;
+void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int position, double value) {
+    if (search_clause < this->NumberClauses && position < this->NumberVariables) {
+        this->EdgeWeights[search_clause][position] = value;
+    } else {
+        exit(1);
     }
 }
 
-double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) const {
-    if (search_clause < this->NumberClauses && variable < this->NumberVariables)
-        return this->EdgeWeights[search_clause][variable];
+double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int position) const {
+    if (search_clause < this->NumberClauses && position < this->NumberVariables)
+        return this->EdgeWeights[search_clause][position];
     else {
         std::cerr << "Wrong index!!" << std::endl;
-        //exit(1);
-        return -1;
+        exit(1);
     }
 }
 
@@ -214,7 +215,7 @@ void FactorGraph::ChangeWeights() {
         this->EdgeWeights.clear();
 
     std::default_random_engine generator(this->seed); // Random engine generator.
-    std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
+    std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
     clause actual_clause;

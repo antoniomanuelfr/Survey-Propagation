@@ -373,13 +373,18 @@ bool FactorGraph::SatisfiesF(const vector<bool> &assign, vector<bool> &sat, cons
 }
 
 uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause &s_clause, const vector<bool> &assign,
-                                   unsigned int &min_index) const {
+                                   unsigned int &min_index, int &freebie) const {
 
     uvector break_count(s_clause.size(), 0);
+    uvector sat_count(s_clause.size(), 0);
     vector<bool> copy(assign);
-    unsigned int variable_index;
     clause c;
+
+    unsigned int variable_index;
+
     unsigned int min = this->NumberClauses;
+    freebie = -1;
+
     for (int i = 0; i < s_clause.size(); i++) {
         variable_index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
         // Get the clauses where each variable appears.
@@ -389,8 +394,10 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
                 // flip the variable
                 copy[variable_index] = !copy[variable_index];
                 // check the assignment
-                if (this->SatisfiesC(copy, this->Clause(clause_index))) {
+                if (!this->SatisfiesC(copy, this->Clause(clause_index))) {
                     break_count[i]++;
+                } else {
+                    sat_count[i]++;
                 }
                 // Restore the assignment
                 copy[variable_index] = !copy[variable_index];
@@ -401,6 +408,10 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
             min = break_count[i];
             min_index = i;
         }
+
+        if (sat_count[i] == 0) {
+            freebie = i;
+        }
     }
     return break_count;
 }
@@ -410,6 +421,8 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
 
     unsigned int min_index, v;
     bool sat, skip;
+    int freebie = -1;
+
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
@@ -447,19 +460,19 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 std::uniform_int_distribution<int> int_dist(0, not_satisfied_clauses.size() - 1);
                 // We get a random not satisfied clause
                 clause C = this->Clause(not_satisfied_clauses[int_dist(gen)]);
-                uvector count = this->getBreakCount(sat_clauses, C, assignment, min_index);
-                // Check if there is any variable of C with break count equal to 0.
-                if (count[min_index] == 0) {
+                uvector count = this->getBreakCount(sat_clauses, C, assignment, min_index, freebie);
+                // Check the freebie move.
+                if (freebie != -1) {
+                    v = C[freebie] > 0 ? C[freebie] - 1 : abs(C[freebie]) - 1;
+                    assignment[v] = !assignment[v];
+                }
+                // We choose a random v of C.
+                if (double_dist(gen) > noise) {
+                    std::uniform_int_distribution<unsigned int> dis(0, C.size() - 1);
+                    v = dis(gen);
+                // We choose tha variable with lower break count
+                } else {
                     v = min_index;
-                } else { // If there the variable with the lower break count isn't zero.
-                    // We choose a random v of C.
-                    if (double_dist(gen) > noise) {
-                        std::uniform_int_distribution<unsigned int> dis(0, C.size() - 1);
-                        v = dis(gen);
-                        // We choose tha variable with lower break count
-                    } else {
-                        v = min_index;
-                    }
                 }
                 // Get the index of the variable that will be flipped
                 int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;

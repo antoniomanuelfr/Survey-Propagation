@@ -77,7 +77,7 @@ public:
     explicit SurveyPropagation(const std::string& path, int seed = 0, unsigned int n_iters = 10e3,
                                double precision = 10e-3,
                                double bound = 1e-16, unsigned int w_iters = 1000, unsigned int flips = 100,
-                               double noise = 0.5) {
+                               double noise = 0.57) {
         this->seed = seed;
         this->AssociatedGraph = new FactorGraph(path, this->seed);
         this->n_iters = n_iters;

@@ -73,7 +73,7 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
     std::ofstream out_file(BIN_PATH + result);
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), 0.0));
     int solved_formulas, unconverged, false_positives, unsat;
     out_file << "fractions/alphas,";
     for (auto i : alphas) {
@@ -90,8 +90,9 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
             p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
             //cout << p.str() << endl;
             initializeCnfFolder(p.str());
-            n_files = 1;
+            n_files = 0;
             for (const auto &path : cnf_folder) {
+                n_files++;
                 FactorGraph orig(path, 0);
                 SurveyPropagation SP(path, 0);
                 int res = SP.SIDF(assignment, fractions[frac]);
@@ -111,6 +112,7 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
                         break;
                     case PROB_UNSAT:
                         unsat++;
+                        cout << "Formula " << path << " is unsatisfiable" << endl;
                         break;
                     case CONTRADICTION:
                         cerr << "Contradiction founded in " << path << endl;
@@ -118,16 +120,15 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
                     default:
                         break;
                 }
-            n_files++;
             }
-            not_solved = table[frac][alpha] == n_files;
+            not_solved = table[frac][alpha] != n_files;
         }
         cout << "alpha = " << alphas[alpha] << endl;
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";
         for (int a = 0; a < alphas.size(); a++) {
-            out_file << table[f][a] << ",";
+            out_file << (table[f][a] / n_files) << ",";
         }
         out_file << endl;
     }
@@ -149,6 +150,6 @@ void TestCNF() {
     }
 }
 int main() {
-    Experiment(10);
+    Experiment(50);
     //TestCNF();
 }

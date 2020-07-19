@@ -326,17 +326,20 @@ public:
 
     /**
      * @brief Function that gets the break count. From a set of satisfied clauses and given a clause C,
-     * this funtion will flip each variable in C and it will count the number of clauses that are still satisfied.
+     * this funtion will flip each variable in C and it will count the number of clauses that are not satisfied after
+     * flipping each variable.
      * @param sat_clauses: Boolean vector where the ith position will be true if the ith clause is satisfied with the
      * given assign. False if it is not satisfied.
      * @param s_clause: Clause that will be used to calculate the break count.
      * @param assign: True assigment that will be used.
      * @param min_index: Index of the variable with the lower break count.
-     * @return A vector (same size than s_clause) with the count of clauses that are still satisfied if we flip each
-     * variable of the clause. If the output of this function is discarded, the compiler will raise a warning.
+     * @param freebie: This paramater will be -1 if there is not any freebie move and a positive integer indicating
+     * the index of the variable that will be used for the freebie move.
+     * @return A vector (same size than s_clause) with the break count of each variable of the clause.
+     * The compiler will raise a warning if the output is discarded.
      */
     [[nodiscard]] uvector getBreakCount(const vector<bool> &sat_clauses, const clause &s_clause,
-                                        const vector<bool> &assign, unsigned int &min_index) const;
+                                        const vector<bool> &assign, unsigned int &min_index, int &freebie) const;
 
     /**
      * @brief WalkSAT algorithm.

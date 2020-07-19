@@ -50,8 +50,9 @@ uvector genIndexVector(unsigned int N) {
     return ordered_indexes;
 }
 
-FactorGraph::FactorGraph(const std::string &path) {
+FactorGraph::FactorGraph(const std::string &path, int seed) {
     int n_clauses = 0, n_variables = 0;
+    this->seed = seed;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
@@ -65,6 +66,7 @@ void FactorGraph::getUnitVars(std::unordered_map<unsigned int, bool> &unit_vars)
         variable = 0;
         int pos_size = this->PositiveVariablesOfClause[i].size(), neg_size = this->NegativeVariablesOfClause[i].size();
         if (pos_size + neg_size == 1) {
+            std::cout << "unit var founded " << this->Clause(i) <<  std::endl;
             if (pos_size == 1) {
                 variable = this->PositiveVariablesOfClause[i][0];
                 variable_assignment = true;
@@ -211,7 +213,7 @@ void FactorGraph::ChangeWeights() {
     if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
 
-    std::default_random_engine generator(SEED); // Random engine generator.
+    std::default_random_engine generator(this->seed); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
@@ -300,17 +302,16 @@ void FactorGraph::PartialAssignment(unsigned int variable_index, bool assignatio
     // If the variable_index i changes.
     for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
         index = this->Connection(search_clause, variable_index + 1, type);
-        // If the variable_index i is in search_clause.
         if (index != -1) {
-            // If the variable_index appears as negative and we assign it to true.
+            // If the variable appears as negative and we assign it to true.
             if (!type && assignation) {
                 deleted_variables_from_clauses[search_clause].push_back(-(variable_index + 1));
-                // If the variable_index appears as positive and we assign it to negative.
+            // If the variable appears as positive and we assign it to negative.
             } else if (type && !assignation) {
                 deleted_variables_from_clauses[search_clause].push_back(variable_index + 1);
             }
-            // If the variable_index appears as positive and we assign it to positive or
-            // If the variable_index appears as negative and we assign it to negative,
+            // If the variable appears as positive and we assign it to positive or
+            // If the variable appears as negative and we assign it to negative,
             // the clause will be satisfied and deleted.
             else {
                 satisfied_clauses[search_clause] = true;
@@ -412,7 +413,7 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
 
-    std::default_random_engine gen(SEED); // Random engine generator.
+    std::default_random_engine gen(this->seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 

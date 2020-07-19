@@ -49,15 +49,22 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             }
             product_u = product_u < this->lower_bound ? 0.0 : product_u;
             product_s = product_s < this->lower_bound ? 0.0 : product_s;
+            // Calculate pis.s
             pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
             pi_u = (1.0 - product_u) * product_s;
             pi_s = (1.0 - product_s) * product_u;
-
+            // Check if the calculated pi is lower than the bound.
+            pi_s = pi_s < this->lower_bound ? 0.0 : pi_s;
+            pi_u = pi_u < this->lower_bound ? 0.0 : pi_u;
+            pi_0 = pi_0 < this->lower_bound ? 0.0 : pi_0;
             // Check the division by zero.
             if ((pi_u + pi_s + pi_0) == 0) {
                 survey = 0.0;
             } else {
+                // Calculate survey using calculated pi.
                 survey *= (pi_u / (pi_u + pi_s + pi_0));
+                // Check the lower bound.
+                survey = survey < this->lower_bound ? 0.0 : survey;
             }
 
         } else {
@@ -65,14 +72,14 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             index = j;
         }
     }
-    // All the pis are calculated, so we calculate the survey
-    this->AssociatedGraph->setEdgeW(search_clause, index, survey < this->lower_bound ? 0.0 : survey);
+    // Save the new survey.
+    this->AssociatedGraph->setEdgeW(search_clause, index, survey);
 }
 
 int SurveyPropagation::SP(bool &trivial) {
     bool converged;
     wmatrix prev_warnings;
-    std::default_random_engine generator(SEED); // Random engine generator.
+    std::default_random_engine generator(this->seed); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
     uvector clauses_indexes = genIndexVector(this->AssociatedGraph->getNClauses()), var_indexes;
     clause clause;

@@ -90,7 +90,7 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
             p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
             //cout << p.str() << endl;
             initializeCnfFolder(p.str());
-            n_files = 0;
+            n_files = 1;
             for (const auto &path : cnf_folder) {
                 FactorGraph orig(path);
                 SurveyPropagation SP(path);
@@ -107,6 +107,7 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
                         break;
                     case SP_UNCONVERGED:
                         unconverged++;
+                        cout << "SP didn't converged using the formula " << path << endl;
                         break;
                     case PROB_UNSAT:
                         unsat++;
@@ -122,7 +123,6 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
             not_solved = table[frac][alpha] == n_files;
         }
         cout << "alpha = " << alphas[alpha] << endl;
-
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";

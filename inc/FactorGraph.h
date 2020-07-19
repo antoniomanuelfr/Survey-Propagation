@@ -77,6 +77,8 @@ private:
     int NumberClauses{0};
     /** Variable that storage the number of variables. */
     int NumberVariables{0};
+    /** Seed for the RNG */
+    int seed{0};
 
     /**
      * @brief Read a DIMACS file (the clauses of the DIMACS file must be in conjunctive normal form).
@@ -117,6 +119,7 @@ public:
         this->PositiveClausesOfVariable = fc.PositiveClausesOfVariable;
         this->NegativeClausesOfVariable = fc.NegativeClausesOfVariable;
         this->EdgeWeights = fc.EdgeWeights;
+        this->seed = fc.seed;
 
         this->NumberClauses = fc.NumberClauses;
         this->NumberVariables = fc.NumberVariables;
@@ -126,7 +129,7 @@ public:
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
      */
-    explicit FactorGraph(const std::string &path);
+    explicit FactorGraph(const std::string &path, int seed = 0);
 
     /**
      * @brief Getter for NumberClauses.

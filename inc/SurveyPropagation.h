@@ -35,6 +35,8 @@ private:
     unsigned int walksat_flips;
     /** Noise for WalkSAT algorithm. */
     double walksat_noise;
+    /** Seed for the RNG. */
+    int seed;
 
     /**
      * @brief Function that implements the SP-Update function.
@@ -70,18 +72,23 @@ public:
      * @param w_iters: Number of iteration for WalkSAT algorithm.
      * @param flips: Number of flips for WalkSAT algorithm.
      * @param noise: Noise parameter for WalkSAT algorithm.
+     * @param seed: Seed for the RNG.
      */
     explicit SurveyPropagation(const std::string& path, unsigned int n_iters = 10e3,
                                double precision = 10e-3,
                                double bound = 1e-16, unsigned int w_iters = 1000, unsigned int flips = 100,
-                               double noise = 0.5) {
-        this->AssociatedGraph = new FactorGraph(path);
+                               double noise = 0.5, int seed = 0) {
+        this->seed = seed;
+        this->AssociatedGraph = new FactorGraph(path, this->seed);
         this->n_iters = n_iters;
         this->precision = precision;
         this->lower_bound = bound;
         this->walksat_iters = w_iters;
         this->walksat_flips = flips;
         this->walksat_noise = noise;
+    }
+    ~SurveyPropagation() {
+        delete this->AssociatedGraph;
     }
 
     /**

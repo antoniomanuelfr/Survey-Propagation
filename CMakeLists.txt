@@ -31,4 +31,6 @@ set_target_properties(SP
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         )
+
 target_compile_definitions(SP PRIVATE CNF_PATH="${CMAKE_SOURCE_DIR}/cnf")
+target_compile_definitions(SP PRIVATE BIN_PATH="${CMAKE_BINARY_DIR}")

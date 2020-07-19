@@ -1,7 +1,7 @@
 #include <iostream>
 #include "SurveyPropagation.h"
 #include <filesystem>
-
+#include <omp.h>
 using namespace std;
 
 static vector<string> cnf_folder;
@@ -68,55 +68,66 @@ string PrintSurveyPropagationResults(int sol) {
     return res;
 }
 
-void Experiment(int N) {
+void Experiment(int N, const string& result = "/bin/results.csv") {
     std::vector<bool> assignment;
-    std::ofstream out_file("results.csv");
-
+    std::ofstream out_file(BIN_PATH + result);
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
     int solved_formulas, unconverged, false_positives, unsat;
-    out_file << "alpha,";
+    out_file << "fractions/alphas,";
     for (auto i : alphas) {
         out_file << i << ",";
     }
     out_file << endl;
-
-    for (auto f : fractions) {
-        out_file << f << ",";
-        for (auto a : alphas) {
-            solved_formulas = unconverged = unsat = false_positives =0;
+    int n_files;
+    bool not_solved;
+    for (int alpha = 0; alpha < alphas.size(); alpha++) {
+        not_solved = true;
+        for (int frac = 0; frac < fractions.size() && not_solved; frac++) {
+            solved_formulas = unconverged = unsat = false_positives = 0;
             std::stringstream p;
-            p << "/testCNF/" << N << "/" << std::setprecision(3) << a ;
-            cout << p.str() << endl;
+            p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
+            //cout << p.str() << endl;
             initializeCnfFolder(p.str());
-            for(const auto &path : cnf_folder) {
-                FactorGraph orig(path);
-                SurveyPropagation SP (orig);
-                int res = SP.SIDF(assignment, f);
+            n_files = 1;
+            for (const auto &path : cnf_folder) {
+                FactorGraph orig(path, 0);
+                SurveyPropagation SP(path, 0);
+                int res = SP.SIDF(assignment, fractions[frac]);
                 switch (res) {
                     case SAT:
                         if (orig.CheckAssignment(assignment)) {
                             solved_formulas++;
+                            table[frac][alpha]++;
                         } else {
+                            cout << "False positive in path: " << path << std::endl;
                             false_positives++;
                         }
-                    break;
+                        break;
                     case SP_UNCONVERGED:
                         unconverged++;
+                        cout << "SP didn't converged using the formula " << path << endl;
                         break;
                     case PROB_UNSAT:
                         unsat++;
                         break;
+                    case CONTRADICTION:
+                        cerr << "Contradiction founded in " << path << endl;
+                        break;
                     default:
                         break;
                 }
+            n_files++;
             }
-            cout << "Results using f = " << f << " and alpha = " << a << ": " << endl;
-            cout << "SAT = " << solved_formulas << ", SP UNCONVERGED = " << unconverged << ", UNSAT = " << unsat
-                 << ", false positives = " << false_positives << endl;
-
-            out_file << (solved_formulas / N) << ",";
+            not_solved = table[frac][alpha] == n_files;
+        }
+        cout << "alpha = " << alphas[alpha] << endl;
+    }
+    for (int f = 0; f < fractions.size(); f++) {
+        out_file << fractions[f] << ",";
+        for (int a = 0; a < alphas.size(); a++) {
+            out_file << table[f][a] << ",";
         }
         out_file << endl;
     }
@@ -124,8 +135,9 @@ void Experiment(int N) {
 
 void TestCNF() {
     initializeCnfFolder();
-    FactorGraph my_graph(cnf_folder[selectFormula()]);
-    SurveyPropagation sp(my_graph);
+    int index = selectFormula();
+    FactorGraph my_graph(cnf_folder[index]);
+    SurveyPropagation sp(cnf_folder[index]);
     std::vector<bool> assignment;
 
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;
@@ -137,6 +149,6 @@ void TestCNF() {
     }
 }
 int main() {
-    Experiment(1000);
+    Experiment(10);
     //TestCNF();
 }

@@ -42,8 +42,17 @@ bool operator == (const clause &c1, const clause &c2) {
     return true;
 }
 
-FactorGraph::FactorGraph(const std::string &path) {
+uvector genIndexVector(unsigned int N) {
+    uvector ordered_indexes;
+    ordered_indexes.resize(N);
+    std::iota(ordered_indexes.begin(), ordered_indexes.end(), 0);
+
+    return ordered_indexes;
+}
+
+FactorGraph::FactorGraph(const std::string &path, int seed) {
     int n_clauses = 0, n_variables = 0;
+    this->seed = seed;
     ReadDIMACS(path, n_clauses, n_variables);
     this->NumberClauses = n_clauses;
     this->NumberVariables = n_variables;
@@ -57,6 +66,7 @@ void FactorGraph::getUnitVars(std::unordered_map<unsigned int, bool> &unit_vars)
         variable = 0;
         int pos_size = this->PositiveVariablesOfClause[i].size(), neg_size = this->NegativeVariablesOfClause[i].size();
         if (pos_size + neg_size == 1) {
+            std::cout << "unit var founded " << this->Clause(i) <<  std::endl;
             if (pos_size == 1) {
                 variable = this->PositiveVariablesOfClause[i][0];
                 variable_assignment = true;
@@ -87,19 +97,20 @@ unsigned int FactorGraph::getIndexOfVariable(unsigned int search_clause, int var
     return index;
 }
 
-void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int variable, double value) {
-    if (search_clause < this->NumberClauses && variable < this->NumberVariables) {
-        this->EdgeWeights[search_clause][variable] = value;
+void FactorGraph::setEdgeW(unsigned int search_clause, unsigned int position, double value) {
+    if (search_clause < this->NumberClauses && position < this->NumberVariables) {
+        this->EdgeWeights[search_clause][position] = value;
+    } else {
+        exit(1);
     }
 }
 
-double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int variable) const {
-    if (search_clause < this->NumberClauses && variable < this->NumberVariables)
-        return this->EdgeWeights[search_clause][variable];
+double FactorGraph::getEdgeW(unsigned int search_clause, unsigned int position) const {
+    if (search_clause < this->NumberClauses && position < this->NumberVariables)
+        return this->EdgeWeights[search_clause][position];
     else {
         std::cerr << "Wrong index!!" << std::endl;
-        //exit(1);
-        return -1;
+        exit(1);
     }
 }
 
@@ -203,8 +214,8 @@ void FactorGraph::ChangeWeights() {
     if (!this->EdgeWeights.empty())
         this->EdgeWeights.clear();
 
-    std::default_random_engine generator(SEED); // Random engine generator.
-    std::uniform_real_distribution<double> distribution(0,1); //Distribution for the random generator.
+    std::default_random_engine generator(this->seed); // Random engine generator.
+    std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
     // Reserve memory
     this->EdgeWeights.resize(this->NumberClauses);
     clause actual_clause;
@@ -222,13 +233,11 @@ void FactorGraph::UnitPropagation() {
     this->getUnitVars(unit_vars);
     auto it = unit_vars.begin();
 
-
     do {
         while (it != unit_vars.end()) {
             this->PartialAssignment(it->first - 1, it->second);
             unit_vars.erase(it->first);
             it = unit_vars.begin();
-
         }
         this->getUnitVars(unit_vars);
         it = unit_vars.begin();
@@ -262,7 +271,6 @@ void FactorGraph::ApplyNewClauses(const vector<vector<int>> &deleted, const vect
                 this->NegativeVariablesOfClause.erase(this->NegativeVariablesOfClause.begin() + (actual_clause));
                 this->EdgeWeights.erase(EdgeWeights.begin() + actual_clause);
                 del++;
-
             }
         }
         // Make the Variables vectors with the new assignment.
@@ -295,18 +303,17 @@ void FactorGraph::PartialAssignment(unsigned int variable_index, bool assignatio
     // If the variable_index i changes.
     for (int search_clause = 0; search_clause < this->NumberClauses; search_clause++) {
         index = this->Connection(search_clause, variable_index + 1, type);
-        // If the variable_index i is in search_clause.
         if (index != -1) {
-            // If the variable_index appears as negative and we assign it to true.
+            // If the variable appears as negative and we assign it to true.
             if (!type && assignation) {
                 deleted_variables_from_clauses[search_clause].push_back(-(variable_index + 1));
-                // If the variable_index appears as positive and we assign it to negative.
+            // If the variable appears as positive and we assign it to negative.
             } else if (type && !assignation) {
                 deleted_variables_from_clauses[search_clause].push_back(variable_index + 1);
             }
-                // If the variable_index appears as positive and we assign it to positive or
-                // If the variable_index appears as negative and we assign it to negative,
-                // the clause will be satisfied and deleted.
+            // If the variable appears as positive and we assign it to positive or
+            // If the variable appears as negative and we assign it to negative,
+            // the clause will be satisfied and deleted.
             else {
                 satisfied_clauses[search_clause] = true;
             }
@@ -369,22 +376,27 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
                                    unsigned int &min_index) const {
 
     uvector break_count(s_clause.size(), 0);
-    int index;
+    vector<bool> copy(assign);
+    unsigned int variable_index;
     clause c;
     unsigned int min = this->NumberClauses;
     for (int i = 0; i < s_clause.size(); i++) {
+        variable_index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
         // Get the clauses where each variable appears.
         for (auto clause_index : this->getClausesOfVariable(s_clause[i])) {
             // If the clause is satisfied, we calculate the break count of that variable
             if (sat_clauses[clause_index]) {
-                c = this->Clause(clause_index);
-                index = s_clause[i] > 0 ? s_clause[i] - 1 : abs(s_clause[i]) - 1;
-                // If flipping the variable var causes that the clause won't be satisfied, break_count[var]++
-                if (!((assign[index] && c[i] < 0) || (!assign[index] && c[i] > 0))) {
+                // flip the variable
+                copy[variable_index] = !copy[variable_index];
+                // check the assignment
+                if (this->SatisfiesC(copy, this->Clause(clause_index))) {
                     break_count[i]++;
-                    }
                 }
+                // Restore the assignment
+                copy[variable_index] = !copy[variable_index];
             }
+        }
+
         if (break_count[i] < min) {
             min = break_count[i];
             min_index = i;
@@ -394,30 +406,27 @@ uvector FactorGraph::getBreakCount(const vector<bool> &sat_clauses, const clause
 }
 
 vector<bool>
-FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& applied_assignment) const {
+FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double noise, const vector<int>& fixed_variables) const {
 
     unsigned int min_index, v;
-    bool sat;
+    bool sat, skip;
     vector<bool> assignment(this->NumberVariables);
     vector<bool> sat_clauses(this->NumberClauses, false);
     uvector not_satisfied_clauses, indexes(this->NumberClauses);
-    // Check if there is a variable that is not going to be changed.
-    for (int i = 0; i < applied_assignment.size(); i++) {
-        if (applied_assignment[i] != 0) {
-            assignment[i] = applied_assignment[i] == 1;
-        }
-    }
 
-    std::default_random_engine gen(SEED); // Random engine generator.
+    std::default_random_engine gen(this->seed); // Random engine generator.
     std::uniform_int_distribution<int> bdist(0, 1); //Distribution for the random boolean generator.
     std::uniform_real_distribution<double> double_dist(0, 1); //Distribution for the random real generator.
 
     for (int i = 0; i < max_tries; i++) {
-        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() { return static_cast<bool>(bdist(gen));});
-        indexes.clear();
-        indexes.resize(this->NumberClauses);
-        std::iota(indexes.begin(), indexes.end(), 0);
+        std::generate(assignment.begin(), assignment.end(), [&bdist, &gen]() {return static_cast<bool>(bdist(gen));});
+        // Check if there is a variable that is not going to be changed.
+        for (auto it : fixed_variables) {
+            assignment[it > 0 ? it : abs(it)] = it > 0;
+        }
+        indexes = genIndexVector(this->NumberClauses);
         if (!this->Contradiction()) {
+            // Update the sat_clasues vector of the clauses that where changed previously.
             this->SatisfiesF(assignment, sat_clauses, indexes);
             for (int flips = 0; flips < max_flips; flips++) {
                 // Get the clauses state of the clauses with the given assignment.
@@ -442,7 +451,6 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 // Check if there is any variable of C with break count equal to 0.
                 if (count[min_index] == 0) {
                     v = min_index;
-
                 } else { // If there the variable with the lower break count isn't zero.
                     // We choose a random v of C.
                     if (double_dist(gen) > noise) {
@@ -455,9 +463,6 @@ FactorGraph::WalkSAT(unsigned int max_tries, unsigned int max_flips, double nois
                 }
                 // Get the index of the variable that will be flipped
                 int index = C[v] > 0 ? C[v] - 1 : abs(C[v]) - 1;
-                // Flip the variable
-                if (applied_assignment[index] != 0)
-                    continue;
                 assignment[index] = !assignment[index];
                 // Check if the new assignment satisfies the clauses where the selected variable appears.
                 // We update the variables that are going to be searched
@@ -493,4 +498,3 @@ bool FactorGraph::CheckAssignment(const vector<bool> &assignment) const {
     }
     return true;
 }
-

@@ -496,4 +496,3 @@ bool FactorGraph::CheckAssignment(const vector<bool> &assignment) const {
     }
     return true;
 }
-

@@ -33,3 +33,4 @@ set_target_properties(SP
         )
 
 target_compile_definitions(SP PRIVATE CNF_PATH="${CMAKE_SOURCE_DIR}/cnf")
+target_compile_definitions(SP PRIVATE BIN_PATH="${CMAKE_BINARY_DIR}")

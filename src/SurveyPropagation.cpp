@@ -37,18 +37,13 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
             for (auto b : va_u) {
                 weight = 1.0 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, va[j]));
                 product_u *= weight;
+                pi_0 *= weight;
             }
             // Calculation of product s
             for (auto b : va_s) {
                 if (b != search_clause) {
                     weight = 1.0 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, va[j]));
                     product_s *= weight;
-                }
-            }
-
-            for (auto b : this->AssociatedGraph->getClausesOfVariable(variable)) {
-                if (b != search_clause) {
-                    weight = 1 - this->AssociatedGraph->getEdgeW(b, this->AssociatedGraph->getIndexOfVariable(b, variable));
                     pi_0 *= weight;
                 }
             }
@@ -147,15 +142,13 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
 
         // Positive PI of variable
         for (auto it : this->AssociatedGraph->getPositiveClausesOfVariable(variable)) {
-            var_index_clause = this->AssociatedGraph->getIndexOfVariable(it, variable);
-            survey = 1 - this->AssociatedGraph->getEdgeW(it, var_index_clause);
+            survey = 1 - this->AssociatedGraph->getEdgeW(it, this->AssociatedGraph->getIndexOfVariable(it, variable));
             pos_prod *= survey;
             zero_pi *= survey;
         }
         // Negative PI of variable
         for (auto it : this->AssociatedGraph->getNegativeClausesOfVariable(variable)) {
-            var_index_clause = this->AssociatedGraph->getIndexOfVariable(it, -variable);
-            survey = 1 - this->AssociatedGraph->getEdgeW(it, var_index_clause);
+            survey = 1 - this->AssociatedGraph->getEdgeW(it, this->AssociatedGraph->getIndexOfVariable(it, -variable));
             neg_prod *= survey;
             zero_pi *= survey;
         }

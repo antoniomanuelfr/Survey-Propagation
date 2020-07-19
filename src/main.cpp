@@ -68,9 +68,9 @@ string PrintSurveyPropagationResults(int sol) {
     return res;
 }
 
-void Experiment(int N) {
+void Experiment(int N, const string& result = "/bin/results.csv") {
     std::vector<bool> assignment;
-    std::ofstream out_file("results.csv");
+    std::ofstream out_file(BIN_PATH + result);
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
     vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
@@ -149,6 +149,6 @@ void TestCNF() {
     }
 }
 int main() {
-    Experiment(100);
+    Experiment(10);
     //TestCNF();
 }

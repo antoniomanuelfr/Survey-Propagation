@@ -78,7 +78,7 @@ void SurveyPropagation::Update(unsigned int search_clause, int variable) {
 int SurveyPropagation::SP(bool &trivial) {
     bool converged;
     wmatrix prev_warnings;
-    std::default_random_engine generator(this->seed); // Random engine generator.
+    std::mt19937 generator(this->seed * 3); // Random engine generator.
     std::uniform_real_distribution<double> distribution(0, 1); //Distribution for the random generator.
     uvector clauses_indexes = genIndexVector(this->AssociatedGraph->getNClauses()), var_indexes;
     clause clause;

@@ -128,9 +128,9 @@ public:
     /**
      * @brief Constructor for FactorGraph.
      * @param path: DIMACS file path.
-     * @param seed: Seed that will be used. Defaults to 0.
+     * @param seed: Seed that will be used. Defaults to 1.
      */
-    explicit FactorGraph(const std::string &path, int seed = 0);
+    explicit FactorGraph(const std::string &path, int seed = 1);
 
     /**
      * @brief Getter for NumberClauses.

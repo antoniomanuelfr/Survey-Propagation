@@ -13,7 +13,9 @@ for i in {"4.21","4.22","4.23","4.24"}; do
 	rm -rf
 	for j in {1..50}; do
 		n_clauses=$(echo "$i * $N" | bc)
+		seed=$(echo "$2 + $j" | bc)
 		echo "N=${N}, n_clauses = ${n_clauses}, i = ${i}, j = ${j}"
-		../../satgenerators/random  -n $N -m $n_clauses -o "${cnfdir}/${N}/${i}/cnf_${N}_${n_clauses}_${j}.cnf" -s $2 || exit 1
+
+		../../satgenerators/random  -n $N -m $n_clauses -o "${cnfdir}/${N}/${i}/cnf_${N}_${n_clauses}_${j}.cnf" -s $seed || exit 1
 	done
 done

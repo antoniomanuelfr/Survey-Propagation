@@ -100,12 +100,11 @@ int SurveyPropagation::SP(bool &trivial) {
             }
         }
         // Check the convergence condition.
-        for (int i = 0; i < prev_warnings.size() && converged; i++) {
+        for (int i = 0; i < prev_warnings.size(); i++) {
             for (int j = 0; j < prev_warnings[i].size(); j++) {
                 trivial = trivial ? this->AssociatedGraph->getEdgeW(i, j) == 0.0 : trivial;
                 if (std::abs(this->AssociatedGraph->getEdgeW(i, j) - prev_warnings[i][j]) > this->precision) {
                     converged = false;
-                    break;
                 }
             }
         }
@@ -173,12 +172,12 @@ void SurveyPropagation::CalculateBiases(vector<double> &positive_w, vector<doubl
 }
 
 int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters) {
-/*    if (!true_assignment.empty()) {
+   if (!true_assignment.empty()) {
         true_assignment.clear();
     }
 
     true_assignment.resize(this->AssociatedGraph->getNVariables(), false);
-    bool trivial_surveys;
+    bool trivial_surveys, assign;
     int max_index;
     vector<int> fixed_variables;
     vector<double> positive_w, negative_w, zero_w;
@@ -186,22 +185,20 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
         // The surveys are randomized by default.
         if (this->SP(trivial_surveys) == SP_CONVERGED) {
             std::cout << "Survey propagation has converged" << std::endl;
+
             // Decimate process, check if the surveys aren't trivial.
             if (trivial_surveys) {
-                vector<int> walksat_assignment (this->AssociatedGraph->getNVariables(), 0);
-                for (int it : fixed_variables) {
-                    walksat_assignment[it] = true_assignment[it] ? 1 : -1;
-                }
                 std::cout << "The surveys are trivial, starting local search." << std::endl;
                 true_assignment = this->AssociatedGraph->WalkSAT(this->walksat_iters, this->walksat_flips,
-                                                                this->walksat_noise, walksat_assignment);
-                std::cout << "Ending of local search." << std::endl;
+                                                                this->walksat_noise, vector<int>());
                 return true_assignment.empty() ? PROB_UNSAT : SAT;
-            }else {
+
+            } else {
                 std::cout << "The survey are not trivial." << std::endl;
                 this->CalculateBiases(positive_w, negative_w, zero_w, max_index);
-                fixed_variables.push_back(max_index);
-                bool assign = positive_w[max_index] > negative_w[max_index];
+                assign = positive_w[max_index] > negative_w[max_index];
+
+                fixed_variables.push_back(assign ? max_index + 1 : -(max_index + 1));
                 true_assignment[max_index] = assign;
                 this->AssociatedGraph->PartialAssignment(max_index, assign);
                 // Calling unit propagation with the assignment applied.
@@ -213,6 +210,15 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
                 } else if (AssociatedGraph->EmptyClause()) {  // If the graph is the empty clause we return SAT.
                     return SAT;
                 }
+
+                true_assignment = this->AssociatedGraph->WalkSAT(this->walksat_iters, this->walksat_flips,
+                                                                this->walksat_noise, fixed_variables);
+                if(!true_assignment.empty()) {
+                    for (int i : fixed_variables) {
+                        true_assignment[i > 0 ? i - 1 : abs(i) - 1] = i > 0;
+                    }
+                    return SAT;
+                }
             }
         } else {
             // If SP has not converged, return SP_UNCONVERGED
@@ -220,7 +226,7 @@ int SurveyPropagation::SID(vector<bool> &true_assignment, unsigned int sid_iters
             return SP_UNCONVERGED;
         }
     }
-*/  true_assignment.clear();
+    true_assignment.clear();
     return PROB_UNSAT;
 }
 
@@ -255,7 +261,7 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
                 this->AssociatedGraph->PartialAssignment(ordered_indexes[i], assign);
                 // Update the true assignment vector with the selected clause.
                 true_assignment[ordered_indexes[i]] =  assign;
-                fixed_variables.push_back(assign ? ordered_indexes[i] : -ordered_indexes[i]);
+                fixed_variables.push_back(assign ? ordered_indexes[i] + 1: -(ordered_indexes[i] + 1));
                 // If there is a contradiction, we return CONTRADICTION
                 if (AssociatedGraph->Contradiction()) {
                     true_assignment.clear();
@@ -278,5 +284,10 @@ int SurveyPropagation::SIDF(vector<bool> &true_assignment, double f) {
 
     true_assignment = this->AssociatedGraph->WalkSAT(this->walksat_iters, this->walksat_flips,
                                                     this->walksat_noise, fixed_variables);
+    if (!true_assignment.empty()) {
+        for (int i : fixed_variables) {
+            true_assignment[abs(i) - 1] = i > 0;
+        }
+    }
     return true_assignment.empty() ? PROB_UNSAT : SAT;
 }

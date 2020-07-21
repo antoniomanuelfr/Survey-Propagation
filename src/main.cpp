@@ -140,16 +140,17 @@ void TestCNF() {
     FactorGraph my_graph(cnf_folder[index]);
     SurveyPropagation sp(cnf_folder[index]);
     std::vector<bool> assignment;
-
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;
     if (!assignment.empty()) {
         for (auto it : assignment)
             cout << it << " ";
         cout << endl;
-        cout << my_graph.CheckAssignment(assignment);
+        cout << (my_graph.CheckAssignment(assignment) ? "The assignment is valid." : "The assignment is not valid");
+        cout << endl;
     }
 }
+
 int main() {
-    Experiment(50);
     //TestCNF();
+    Experiment(50);
 }

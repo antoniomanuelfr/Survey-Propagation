@@ -66,18 +66,18 @@ public:
     /**
      * @brief Constructor for the Survey Propagation class.
      * @param path FactorGraph object with the formula that is going to be used.
-     * @param seed: Seed for the RNG. Defaults to 0.
+     * @param seed: Seed for the RNG. Defaults to 1.
      * @param n_iters: Maximum number of iterations. Defaults to 1000.
      * @param precision: Precision of the algorithm. Defaults to 0.1.
      * @param bound: If a survey is lower than bound, it will be set to 0.
      * @param w_iters: Number of iteration for WalkSAT algorithm. Defaults to 1000.
      * @param flips: Number of flips for WalkSAT algorithm. Defaults to 100.
-     * @param noise: Noise parameter for WalkSAT algorithm. Defaults to 0.5.
+     * @param noise: Noise parameter for WalkSAT algorithm. Defaults to 0.57.
      */
-    explicit SurveyPropagation(const std::string& path, int seed = 0, unsigned int n_iters = 10e3,
+    explicit SurveyPropagation(const std::string& path, int seed = 1, unsigned int n_iters = 10e3,
                                double precision = 10e-3,
                                double bound = 1e-16, unsigned int w_iters = 1000, unsigned int flips = 100,
-                               double noise = 0.5) {
+                               double noise = 0.57) {
         this->seed = seed;
         this->AssociatedGraph = new FactorGraph(path, this->seed);
         this->n_iters = n_iters;

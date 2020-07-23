@@ -1,9 +1,13 @@
 #include <iostream>
 #include "SurveyPropagation.h"
 #include <filesystem>
+#include <chrono>
 #include <omp.h>
-using namespace std;
 
+using namespace std;
+using namespace std::chrono;
+
+/** Vector of string that will save the formula's file path */
 static vector<string> cnf_folder;
 
 /**
@@ -22,7 +26,6 @@ void initializeCnfFolder(const string& folder = "") {
     } catch (const std::exception& ex) {
         std::cerr << ex.what() << std::endl;
         exit(1);
-
     }
 }
 
@@ -73,8 +76,11 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
     std::ofstream out_file(BIN_PATH + result);
     vector<double> fractions = {0.04, 0.02, 0.01, 0.005, 0.0025, 0.00125};
     vector<double> alphas = {4.21, 4.22, 4.23, 4.24};
-    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), -1.0));
+    vector<double>times;
+    vector<vector<double>> table (fractions.size(), vector<double>(alphas.size(), 0.0));
+
     int solved_formulas, unconverged, false_positives, unsat;
+    long unsigned int alpha_time;
     out_file << "fractions/alphas,";
     for (auto i : alphas) {
         out_file << i << ",";
@@ -84,17 +90,21 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
     bool not_solved;
     for (int alpha = 0; alpha < alphas.size(); alpha++) {
         not_solved = true;
+        alpha_time = 0;
         for (int frac = 0; frac < fractions.size() && not_solved; frac++) {
             solved_formulas = unconverged = unsat = false_positives = 0;
             std::stringstream p;
             p << "/testCNF/" << N << "/" << std::setprecision(3) << alphas[alpha];
-            //cout << p.str() << endl;
             initializeCnfFolder(p.str());
-            n_files = 1;
+            n_files = 0;
             for (const auto &path : cnf_folder) {
-                FactorGraph orig(path, 0);
-                SurveyPropagation SP(path, 0);
+                n_files++;
+                FactorGraph orig(path, 5);
+                SurveyPropagation SP(path, 7);
+                auto time_1 = high_resolution_clock::now();
                 int res = SP.SIDF(assignment, fractions[frac]);
+                auto time_2 = high_resolution_clock::now();
+                alpha_time += duration_cast<milliseconds>(time_2 - time_1).count();
                 switch (res) {
                     case SAT:
                         if (orig.CheckAssignment(assignment)) {
@@ -111,6 +121,7 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
                         break;
                     case PROB_UNSAT:
                         unsat++;
+                        cout << "Formula " << path << " is unsatisfiable" << endl;
                         break;
                     case CONTRADICTION:
                         cerr << "Contradiction founded in " << path << endl;
@@ -118,19 +129,25 @@ void Experiment(int N, const string& result = "/bin/results.csv") {
                     default:
                         break;
                 }
-            n_files++;
             }
-            not_solved = table[frac][alpha] == n_files;
+            not_solved = table[frac][alpha] != n_files;
         }
         cout << "alpha = " << alphas[alpha] << endl;
+        times.push_back(alpha_time * 10e-3);
     }
     for (int f = 0; f < fractions.size(); f++) {
         out_file << fractions[f] << ",";
         for (int a = 0; a < alphas.size(); a++) {
-            out_file << table[f][a] << ",";
+            out_file << (table[f][a] / n_files) << ",";
         }
         out_file << endl;
     }
+    out_file << "Time in seconds,";
+    for (auto it : times) {
+        out_file << it << ",";
+    }
+    out_file << endl;
+    out_file.close();
 }
 
 void TestCNF() {
@@ -139,16 +156,17 @@ void TestCNF() {
     FactorGraph my_graph(cnf_folder[index]);
     SurveyPropagation sp(cnf_folder[index]);
     std::vector<bool> assignment;
-
     cout << PrintSurveyPropagationResults(sp.SID(assignment, 10)) << endl;
     if (!assignment.empty()) {
         for (auto it : assignment)
             cout << it << " ";
         cout << endl;
-        cout << my_graph.CheckAssignment(assignment);
+        cout << (my_graph.CheckAssignment(assignment) ? "The assignment is valid." : "The assignment is not valid");
+        cout << endl;
     }
 }
+
 int main() {
-    Experiment(10);
     //TestCNF();
+    Experiment(100);
 }

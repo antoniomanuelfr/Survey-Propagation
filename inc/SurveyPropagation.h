@@ -1,7 +1,3 @@
-//
-// Created by antoniomanuelfr on 4/10/20.
-//
-
 #ifndef SURVEY_PROPAGATION_H
 #define SURVEY_PROPAGATION_H
 
